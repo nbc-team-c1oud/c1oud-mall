@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: c1oud_mall
+  profiles:
+    active: dev
+  jpa:
+    open-in-view: false
+
+# SpringDoc / Swagger — Spring Boot 4 호환 버전 출시 후 재도입 예정
