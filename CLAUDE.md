@@ -64,14 +64,23 @@ nbc.c1oud_mall.common
 
 | 레이어 | 입력 | 출력 | 비고 |
 | --- | --- | --- | --- |
-| presentation | `XxxRequest` | `XxxResponse` | 컨트롤러 전용 |
+| presentation | `XxxRequest` | `XxxResponse` | 도메인별 응답 DTO. `ApiResponse.data`에 들어감 |
 | application | `XxxCommand` (쓰기) / `XxxQuery` (읽기) | 도메인 객체 or `XxxResponse`로 변환 | 서비스 입력 DTO |
 | infrastructure | - | `XxxProjection` (조회 결과) / JPA Entity | 조회는 Projection, 영속은 ORM |
 
+**공통 응답 래퍼** ⭐
+
+- 모든 HTTP 응답(성공/실패)은 `ApiResponse<T>` 래퍼로 통일
+- 컨트롤러 반환 타입: `ResponseEntity<ApiResponse<XxxResponse>>` 또는 `ResponseEntity<ApiResponse<Void>>`
+- **정적 팩토리만 사용**: `ApiResponse.success(data)` / `ApiResponse.success(data, message)` / `ApiResponse.successNoContent()` / `ApiResponse.error(code, message)`
+- `ResponseEntity` 래핑 단축은 `ApiResponses.ok(...)` / `ApiResponses.created(...)` 등 헬퍼 사용
+- 패키지: `nbc.c1oud_mall.common.response`
+
 **흐름**
 
-- 쓰기: `Request` → `Command` → domain → (infra) Entity 저장 → `Response`
-- 읽기: `Query` → (infra) `Projection` 조회 → application → `Response`
+- 쓰기: `Request` → `Command` → domain → (infra) Entity 저장 → `Response` → `ApiResponse.success(response)` 반환
+- 읽기: `Query` → (infra) `Projection` 조회 → application → `Response` → `ApiResponse.success(response)` 반환
+- 실패: `BusinessException` throw → `GlobalExceptionHandler`가 `ApiResponse.error(code, message)`로 변환
 
 ---
 
@@ -98,11 +107,13 @@ nbc.c1oud_mall.common
 - domain → 다른 레이어 의존
 - JPA Entity를 Request/Response로 직접 사용
 - Command/Query를 컨트롤러에서 직접 반환
+- 컨트롤러에서 `ApiResponse` 래핑 없이 `XxxResponse`/원시 타입 직접 반환 (반드시 `ResponseEntity<ApiResponse<T>>`)
+- `ApiResponse` 생성자 직접 호출 (정적 팩토리 메서드만 사용)
 
 **예외 처리**
 - 도메인마다 별도 Exception 클래스 남발 (`BusinessException`으로 통일)
 - ErrorCode에 없는 메시지를 컨트롤러/서비스에서 하드코딩
-- `ErrorResponse` 외의 임의 응답 포맷 (단, 파일 업로드 등 명시적 예외는 유지)
+- `ApiResponse` 외의 임의 응답 포맷 (단, 파일 업로드 등 명시적 예외는 유지)
 - Lombok으로 대체 가능한 생성자/getter 수동 작성
 
 ---
@@ -116,7 +127,8 @@ nbc.c1oud_mall.common
 
 - **`ErrorCode`** (enum): 모든 에러를 `(code, message, HttpStatus)` 3요소로 정의하는 단일 출처(SSOT)
 - **`BusinessException`**: 비즈니스 예외의 단일 타입. ErrorCode를 들고 다님
-- **`GlobalExceptionHandler`** (`@RestControllerAdvice`): 모든 예외를 `ErrorResponse` JSON으로 변환
+- **`ApiResponse<T>`** (`common.response`): 모든 HTTP 응답의 공통 래퍼 (성공/실패 통일)
+- **`GlobalExceptionHandler`** (`@RestControllerAdvice`): 모든 예외를 `ApiResponse<Void>` JSON으로 변환
 - **도메인별 예외 클래스를 새로 만들지 않고** `BusinessException + ErrorCode` 조합으로 표현
 
 ### 8.2 ErrorCode 작성 규칙
@@ -140,11 +152,12 @@ nbc.c1oud_mall.common
 
 ### 8.4 GlobalExceptionHandler 규칙
 
-- 모든 핸들러는 `ErrorResponse(code, message, path, timestamp)` 형식으로 응답
-  - `path`는 `req.getRequestURI()`, `timestamp`는 `OffsetDateTime.now()`
+- 모든 핸들러는 `ResponseEntity<ApiResponse<Void>>` 반환 — 본문은 `ApiResponse.error(code, message)`
+  - `timestamp`는 `ApiResponse` 내부에서 자동 생성 (`Instant.now()`)
+  - 요청 경로(`req.getRequestURI()`)는 응답 본문에 포함하지 않고 로그에만 기록 (디버깅 용도)
 - `BusinessException` → ErrorCode의 status/code 사용, message는 detail 포함된 `ex.getMessage()`
 - `MethodArgumentNotValidException` (Validation) → `ErrorCode.INVALID_INPUT` 기반 400
-- 새 표준 예외 타입을 추가할 때만 핸들러 메서드를 추가하고, `ErrorResponse` 형식은 그대로 유지
+- 새 표준 예외 타입을 추가할 때만 핸들러 메서드를 추가하고, `ApiResponse` 응답 포맷은 그대로 유지
 - 보안 민감 응답(`AccessDeniedException` 등)은 ErrorCode enum 메시지로 통일하고, 구체 사유는 log에만 기록
 
 ---
