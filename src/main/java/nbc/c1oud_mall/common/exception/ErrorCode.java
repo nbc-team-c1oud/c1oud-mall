@@ -12,7 +12,7 @@ public enum ErrorCode {
     INVALID_INPUT("C001", "잘못된 입력입니다.", HttpStatus.BAD_REQUEST),
     INTERNAL_ERROR("C002", "서버 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     ACCESS_DENIED("C003", "접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
-    UNAUTHORIZED("C004", "인증이 필요합니다.", HttpStatus.UNAUTHORIZED);
+    UNAUTHORIZED("C004", "인증이 필요합니다.", HttpStatus.UNAUTHORIZED),
 
     // ─── 사용자 ───
     // (도메인 작업 시 추가)
@@ -21,7 +21,9 @@ public enum ErrorCode {
     // (도메인 작업 시 추가)
 
     // ─── 결제 ───
-    // (도메인 작업 시 추가)
+    PAYMENT_AMOUNT_MISMATCH("PM001", "결제 금액이 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+    PAYMENT_DUPLICATE_PAYMENT_ID("PM002", "결제 ID 채번 충돌이 발생했습니다.", HttpStatus.CONFLICT),
+    PAYMENT_INVALID_AMOUNT("PM003", "결제 금액이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String message;
