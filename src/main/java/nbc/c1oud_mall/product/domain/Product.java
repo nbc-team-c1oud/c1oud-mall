@@ -1,0 +1,48 @@
+package nbc.c1oud_mall.product.domain;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import nbc.c1oud_mall.common.domain.BaseEntity;
+
+@Entity
+@Table
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Product extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy =  GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "product_name", nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private Long price;
+
+    @Column(name = "stock_quantity", nullable = false)
+    private Integer stockQuantity;
+
+    @Column(nullable = false)
+    private String category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "product_status", nullable = false)
+    private ProductStatus status;
+
+    @Column(name = "product_description", columnDefinition = "TEXT")
+    private String description;
+
+    @Builder
+    public Product(String name, Long price, Integer stockQuantity, String category, ProductStatus status, String description) {
+        this.name = name;
+        this.price = price;
+        this.stockQuantity = stockQuantity;
+        this.category = category;
+        this.status = status;
+        this.description = description;
+    }
+}
