@@ -14,6 +14,10 @@ public enum ErrorCode {
     ACCESS_DENIED("C003", "접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
     UNAUTHORIZED("C004", "인증이 필요합니다.", HttpStatus.UNAUTHORIZED),
 
+    // ─── 상품 ───
+    PRODUCT_NOT_FOUND("PRD001", "존재하지 않는 상품입니다.", HttpStatus.NOT_FOUND),
+    INSUFFICIENT_STOCK("PRD002", "요청 상품 재고가 없습니다.", HttpStatus.BAD_REQUEST),
+
     // ─── 사용자 ───
     // (도메인 작업 시 추가)
 
