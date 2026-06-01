@@ -1,4 +1,4 @@
-package nbc.c1oud_mall.auth.entity;
+package nbc.c1oud_mall.auth.domain.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import nbc.c1oud_mall.auth.UserRole;
+import nbc.c1oud_mall.auth.domain.UserRole;
 
 @Getter
 @Entity

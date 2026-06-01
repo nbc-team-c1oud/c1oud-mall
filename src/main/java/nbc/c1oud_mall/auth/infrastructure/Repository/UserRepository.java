@@ -1,10 +1,10 @@
-package nbc.c1oud_mall.auth.Repository;
+package nbc.c1oud_mall.auth.infrastructure.Repository;
 
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import nbc.c1oud_mall.auth.entity.User;
+import nbc.c1oud_mall.auth.domain.entity.User;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 	//회원가입 - 이메일 중복체크
