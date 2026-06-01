@@ -44,7 +44,12 @@ public class AuthService {
 		userRepository.save(user);
 	}
 
-
+	/**
+	 * 로그인
+	 *
+	 * @param request 이메일, 비밀번호
+	 * @return 로그인 가능한 Bearer 토큰
+	 */
 	@Transactional(readOnly = true)
 	public LoginResponse login(LoginRequest request) {
 		//이메일로 유저 조회
