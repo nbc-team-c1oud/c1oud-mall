@@ -1,4 +1,4 @@
-package nbc.c1oud_mall.auth.filter;
+package nbc.c1oud_mall.auth.jwt;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,7 +14,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import nbc.c1oud_mall.auth.infrastructure.util.JwtUtil;
 
 @Component
 @RequiredArgsConstructor

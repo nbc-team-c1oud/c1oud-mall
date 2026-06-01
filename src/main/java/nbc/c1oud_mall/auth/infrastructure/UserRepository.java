@@ -1,4 +1,4 @@
-package nbc.c1oud_mall.auth.infrastructure.Repository;
+package nbc.c1oud_mall.auth.infrastructure;
 
 import java.util.Optional;
 
