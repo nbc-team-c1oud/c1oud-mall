@@ -7,3 +7,8 @@ spring:
     open-in-view: false
 
 # SpringDoc / Swagger — Spring Boot 4 호환 버전 출시 후 재도입 예정
+
+
+jwt:
+  secret: your-secret-key
+  expiration: 3600000
