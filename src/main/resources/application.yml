@@ -6,4 +6,9 @@ spring:
   jpa:
     open-in-view: false
 
+# ─── PortOne V2 REST API ───
+portone:
+  base-url: ${PORTONE_BASE_URL:https://api.portone.io}
+  secret: ${PORTONE_API_SECRET:}
+
 # SpringDoc / Swagger — Spring Boot 4 호환 버전 출시 후 재도입 예정
