@@ -14,6 +14,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import nbc.c1oud_mall.common.domain.BaseEntity;
+import nbc.c1oud_mall.common.exception.BusinessException;
+import nbc.c1oud_mall.common.exception.ErrorCode;
+import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -106,5 +109,48 @@ public class Payment extends BaseEntity {
                 confirmedAt,
                 pgTxId
         );
+    }
+
+    public boolean isCompleted() {
+        return status == PaymentStatus.COMPLETED;
+    }
+
+    public void verifyOwnership(Long requestUserId) {
+        if (requestUserId == null || !this.userId.equals(requestUserId)) {
+            throw BusinessException.withDetail(
+                    ErrorCode.PAYMENT_AUTHORIZATION_FAILED,
+                    "paymentId=" + id + ", requestUserId=" + requestUserId
+            );
+        }
+    }
+
+    public void verifyPortOneStatus(PortOnePaymentStatus portoneStatus) {
+        if (portoneStatus != PortOnePaymentStatus.PAID) {
+            throw BusinessException.withDetail(
+                    ErrorCode.PORTONE_PAYMENT_NOT_PAID,
+                    "portoneStatus=" + portoneStatus
+            );
+        }
+    }
+
+    public void verifyAmount(long portoneTotalAmount) {
+        if (portoneTotalAmount != breakdown.getPgAmount()) {
+            throw BusinessException.withDetail(
+                    ErrorCode.PAYMENT_AMOUNT_MISMATCH,
+                    "expected=" + breakdown.getPgAmount() + ", actual=" + portoneTotalAmount
+            );
+        }
+    }
+
+    public void markCompleted(String pgTxId, long pointEarnedAmount, LocalDateTime confirmedAt) {
+        if (status != PaymentStatus.PENDING) {
+            throw new IllegalStateException(
+                    "Payment status must be PENDING to mark completed, but was " + status
+            );
+        }
+        this.status = PaymentStatus.COMPLETED;
+        this.pgTxId = pgTxId;
+        this.pointEarnedAmount = pointEarnedAmount;
+        this.confirmedAt = confirmedAt;
     }
 }
