@@ -14,6 +14,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import nbc.c1oud_mall.auth.domain.UserRole;
+import nbc.c1oud_mall.common.exception.BusinessException;
+import nbc.c1oud_mall.common.exception.ErrorCode;
 
 @Component
 public class JwtUtil {
@@ -55,9 +57,9 @@ public class JwtUtil {
 			getClaims(token);
 			return true;
 		}catch (ExpiredJwtException e) {
-			throw new RuntimeException("TOKEN_EXPIRED");
+			throw new BusinessException(ErrorCode.TOKEN_EXPIRED);
 		}catch (JwtException e) {
-			throw new RuntimeException("INVALID_TOKEN");
+			throw new BusinessException(ErrorCode.INVALID_TOKEN);
 		}
 	}
 

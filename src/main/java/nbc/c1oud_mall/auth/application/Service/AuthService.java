@@ -10,6 +10,8 @@ import nbc.c1oud_mall.auth.infrastructure.UserRepository;
 import nbc.c1oud_mall.auth.presentation.dto.LoginRequest;
 import nbc.c1oud_mall.auth.presentation.dto.LoginResponse;
 import nbc.c1oud_mall.auth.presentation.dto.SignupRequest;
+import nbc.c1oud_mall.common.exception.BusinessException;
+import nbc.c1oud_mall.common.exception.ErrorCode;
 import nbc.c1oud_mall.common.jwt.JwtUtil;
 
 @Service
@@ -28,7 +30,7 @@ public class AuthService {
 	public void signup(SignupRequest request) {
 		// 이메일 중복 체크
 		if (userRepository.existsByEmail(request.getEmail())) {
-			throw new RuntimeException("EMAIL_DUPLICATE");
+			throw new BusinessException(ErrorCode.EMAIL_DUPLICATE);
 		}
 
 		// 비밀번호 암호화
