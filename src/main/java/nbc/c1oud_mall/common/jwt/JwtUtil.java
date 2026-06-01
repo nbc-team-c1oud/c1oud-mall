@@ -1,4 +1,4 @@
-package nbc.c1oud_mall.auth.jwt;
+package nbc.c1oud_mall.common.jwt;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;

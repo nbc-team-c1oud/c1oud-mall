@@ -1,4 +1,4 @@
-package nbc.c1oud_mall.auth.security;
+package nbc.c1oud_mall.common.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,7 +11,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
-import nbc.c1oud_mall.auth.jwt.JwtAuthFilter;
+import nbc.c1oud_mall.common.jwt.JwtAuthFilter;
 
 @Configuration
 @EnableWebSecurity
