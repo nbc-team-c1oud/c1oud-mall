@@ -27,7 +27,9 @@ public enum ErrorCode {
     // ─── 결제 ───
     PAYMENT_AMOUNT_MISMATCH("PM001", "결제 금액이 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
     PAYMENT_DUPLICATE_PAYMENT_ID("PM002", "결제 ID 채번 충돌이 발생했습니다.", HttpStatus.CONFLICT),
-    PAYMENT_INVALID_AMOUNT("PM003", "결제 금액이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
+    PAYMENT_INVALID_AMOUNT("PM003", "결제 금액이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+    PORTONE_QUERY_FAILED("PM004", "PortOne 조회에 실패했습니다.", HttpStatus.BAD_GATEWAY),
+    PORTONE_RESPONSE_INVALID("PM005", "PortOne 응답이 유효하지 않습니다.", HttpStatus.BAD_GATEWAY);
 
     private final String code;
     private final String message;
