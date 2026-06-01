@@ -29,7 +29,10 @@ public enum ErrorCode {
     PAYMENT_DUPLICATE_PAYMENT_ID("PM002", "결제 ID 채번 충돌이 발생했습니다.", HttpStatus.CONFLICT),
     PAYMENT_INVALID_AMOUNT("PM003", "결제 금액이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
     PORTONE_QUERY_FAILED("PM004", "PortOne 조회에 실패했습니다.", HttpStatus.BAD_GATEWAY),
-    PORTONE_RESPONSE_INVALID("PM005", "PortOne 응답이 유효하지 않습니다.", HttpStatus.BAD_GATEWAY);
+    PORTONE_RESPONSE_INVALID("PM005", "PortOne 응답이 유효하지 않습니다.", HttpStatus.BAD_GATEWAY),
+    PAYMENT_AUTHORIZATION_FAILED("PM006", "결제 소유권 검증에 실패했습니다.", HttpStatus.FORBIDDEN),
+    PORTONE_PAYMENT_NOT_PAID("PM007", "PortOne 결제 상태가 PAID가 아닙니다.", HttpStatus.BAD_REQUEST),
+    PAYMENT_NOT_FOUND("PM008", "결제를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String message;
