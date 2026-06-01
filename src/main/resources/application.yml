@@ -10,5 +10,5 @@ spring:
 
 
 jwt:
-  secret: your-secret-key
+  secret: dkantodrkrdjqtdltkfrltlwkrdlqslek
   expiration: 3600000
