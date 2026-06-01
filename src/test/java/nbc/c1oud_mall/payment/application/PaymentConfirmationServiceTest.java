@@ -1,0 +1,192 @@
+package nbc.c1oud_mall.payment.application;
+
+import nbc.c1oud_mall.common.exception.BusinessException;
+import nbc.c1oud_mall.common.exception.ErrorCode;
+import nbc.c1oud_mall.payment.application.dto.PaymentConfirmationResult;
+import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
+import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
+import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand;
+import nbc.c1oud_mall.payment.domain.Payment;
+import nbc.c1oud_mall.payment.domain.PaymentStatus;
+import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
+import nbc.c1oud_mall.payment.infrastructure.mock.MockCartService;
+import nbc.c1oud_mall.payment.infrastructure.mock.MockInventoryService;
+import nbc.c1oud_mall.payment.infrastructure.mock.MockOrderService;
+import nbc.c1oud_mall.payment.infrastructure.mock.MockPointService;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class PaymentConfirmationServiceTest {
+
+    private static final String PORTONE_ID = "portone-payment-test-001";
+    private static final Long ORDER_ID = 1L;
+    private static final Long USER_ID = 100L;
+
+    @Mock
+    private PaymentJpaRepository paymentRepository;
+    @Mock
+    private PortOnePaymentQueryPort portOnePaymentQueryPort;
+    @Mock
+    private MockOrderService mockOrderService;
+    @Mock
+    private MockPointService mockPointService;
+    @Mock
+    private MockCartService mockCartService;
+    @Mock
+    private MockInventoryService mockInventoryService;
+
+    @InjectMocks
+    private PaymentConfirmationService service;
+
+    private Payment pendingPayment(long pgAmount, long pointUsed) {
+        return Payment.rehydrate(
+                42L, PORTONE_ID, ORDER_ID, USER_ID,
+                pgAmount + pointUsed, pgAmount, pointUsed,
+                0L, PaymentStatus.PENDING, null, null);
+    }
+
+    private PortOnePaymentInfo paidInfo(long totalAmount) {
+        return new PortOnePaymentInfo(
+                PORTONE_ID, PortOnePaymentStatus.PAID, totalAmount, "TOSSPAYMENTS", "pg-tx-001");
+    }
+
+    @Test
+    @DisplayName("정상 확정: COMPLETED 전이 + 4개 mock 서비스 호출, alreadyCompleted=false")
+    void confirm_normal_flow() {
+        Payment payment = pendingPayment(9_000L, 1_000L);
+        when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
+        when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
+
+        PaymentConfirmationResult result =
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID));
+
+        assertThat(result.paymentId()).isEqualTo(42L);
+        assertThat(result.alreadyCompleted()).isFalse();
+        assertThat(result.status()).isEqualTo(PaymentStatus.COMPLETED);
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+        assertThat(payment.getPgTxId()).isEqualTo("pg-tx-001");
+
+        verify(mockOrderService).completeOrder(ORDER_ID);
+        verify(mockPointService).deductPoints(USER_ID, 1_000L);
+        verify(mockPointService, never()).accruePoints(any(), anyLong());
+        verify(mockCartService).clearByUserId(USER_ID);
+        verify(mockInventoryService).confirmByOrderId(ORDER_ID);
+    }
+
+    @Test
+    @DisplayName("멱등: 이미 COMPLETED → 부수효과 없이 alreadyCompleted=true 반환")
+    void confirm_idempotent_already_completed() {
+        Payment completed = Payment.rehydrate(
+                42L, PORTONE_ID, ORDER_ID, USER_ID,
+                10_000L, 9_000L, 1_000L, 0L,
+                PaymentStatus.COMPLETED, LocalDateTime.now(), "pg-existing");
+        when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
+        when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(completed));
+
+        PaymentConfirmationResult result =
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID));
+
+        assertThat(result.alreadyCompleted()).isTrue();
+        verifyNoInteractions(mockOrderService);
+        verifyNoInteractions(mockPointService);
+        verifyNoInteractions(mockCartService);
+        verifyNoInteractions(mockInventoryService);
+    }
+
+    @Test
+    @DisplayName("소유권 위반(다른 userId) → PM006, markCompleted·mock 호출 미발생")
+    void confirm_ownership_violation_throws_pm006() {
+        Payment payment = pendingPayment(9_000L, 1_000L);
+        when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
+        when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() ->
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, 999L)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.PAYMENT_AUTHORIZATION_FAILED);
+
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        verifyNoInteractions(mockOrderService);
+    }
+
+    @Test
+    @DisplayName("PortOne status가 PAID가 아님 → PM007")
+    void confirm_portone_not_paid_throws_pm007() {
+        Payment payment = pendingPayment(9_000L, 1_000L);
+        PortOnePaymentInfo failedInfo = new PortOnePaymentInfo(
+                PORTONE_ID, PortOnePaymentStatus.FAILED, 9_000L, "TOSSPAYMENTS", "pg-tx-001");
+        when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(failedInfo);
+        when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() ->
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.PORTONE_PAYMENT_NOT_PAID);
+
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        verifyNoInteractions(mockOrderService);
+    }
+
+    @Test
+    @DisplayName("금액 불일치(PortOne != breakdown.pgAmount) → PM001")
+    void confirm_amount_mismatch_throws_pm001() {
+        Payment payment = pendingPayment(9_000L, 1_000L);
+        when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(8_999L));
+        when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() ->
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("Payment 미존재 → PM008")
+    void confirm_payment_not_found_throws_pm008() {
+        when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
+        when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.PAYMENT_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("포인트 사용 0 → deductPoints 미호출, 나머지 mock 정상 호출")
+    void confirm_no_point_used_skips_deduct() {
+        Payment payment = pendingPayment(10_000L, 0L);
+        when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(10_000L));
+        when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
+
+        service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID));
+
+        verify(mockPointService, never()).deductPoints(any(), anyLong());
+        verify(mockOrderService).completeOrder(ORDER_ID);
+        verify(mockCartService).clearByUserId(USER_ID);
+        verify(mockInventoryService).confirmByOrderId(ORDER_ID);
+    }
+}
