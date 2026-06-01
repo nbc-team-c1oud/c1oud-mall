@@ -56,11 +56,11 @@ public class AuthService {
 	public LoginResponse login(LoginRequest request) {
 		//이메일로 유저 조회
 		User user = userRepository. findByEmail(request.getEmail())
-			.orElseThrow(() -> new RuntimeException("INVALID_CREDENTIALS"));
+			.orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
 		//비밀번호 검증
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-			throw new RuntimeException("INVALID_CREDENTIALS");
+			throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
 		}
 
 		//JWT 토큰 발급
