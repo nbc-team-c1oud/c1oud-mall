@@ -2,6 +2,7 @@ package nbc.c1oud_mall.cart.application;
 
 import lombok.RequiredArgsConstructor;
 import nbc.c1oud_mall.cart.application.dto.CartItemAddRequest;
+import nbc.c1oud_mall.cart.application.dto.CartItemUpdateRequest;
 import nbc.c1oud_mall.cart.domain.CartItem;
 import nbc.c1oud_mall.cart.infrastructure.CartItemJpaRepository;
 import nbc.c1oud_mall.common.exception.BusinessException;
@@ -42,5 +43,16 @@ public class CartService {
                     .build();
             cartItemJpaRepository.save(newItem);
         }
+    }
+
+    @Transactional
+    public void updateCartItemQuantity(Long memberId, Long cartItemId, CartItemUpdateRequest request) {
+        CartItem cartItem = cartItemJpaRepository.findById(cartItemId).orElseThrow(
+                () -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND)
+        );
+
+        cartItem.validateOwner(memberId);
+
+        cartItem.updateQuantity(request.getQuantity());
     }
 }
