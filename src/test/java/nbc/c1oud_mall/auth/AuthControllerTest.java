@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,10 +43,9 @@ class AuthControllerTest {
 
 		mockMvc.perform(post("/api/v1/auth/signup")
 				.contentType(MediaType.APPLICATION_JSON)
-				.contentType(objectMapper.writeValueAsString(request)))
-			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.success").value(false))
-			.andExpect(jsonPath("$.code").value("U001"));
+				.content(objectMapper.writeValueAsString(request)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.success").value(true));
 	}
 
 	//이메일 중복 시 409
@@ -85,6 +83,7 @@ class AuthControllerTest {
 	}
 
 	//비밀번호 불일치시 401
+	@Test
 	void 로그인_비밀번호불일치_실패() throws Exception {
 		// 미리 유저 저장
 		userRepository.save(new User("test@test.com", passwordEncoder.encode("password123"), "홍길동", "010-1234-5678"));
