@@ -46,6 +46,7 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase {
 
         try {
             payment.verifyOwnership(command.requestUserId());
+            payment.verifyOrderId(command.orderId());
             payment.verifyPortOneStatus(info.status());
             payment.verifyAmount(info.totalAmount());
         } catch (BusinessException ex) {

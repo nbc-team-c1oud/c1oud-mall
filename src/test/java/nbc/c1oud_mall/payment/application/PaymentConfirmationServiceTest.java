@@ -79,7 +79,7 @@ class PaymentConfirmationServiceTest {
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
 
         PaymentConfirmationResult result =
-                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID));
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
 
         assertThat(result.paymentId()).isEqualTo(42L);
         assertThat(result.alreadyCompleted()).isFalse();
@@ -105,7 +105,7 @@ class PaymentConfirmationServiceTest {
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(completed));
 
         PaymentConfirmationResult result =
-                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID));
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
 
         assertThat(result.alreadyCompleted()).isTrue();
         verifyNoInteractions(mockOrderService);
@@ -120,10 +120,28 @@ class PaymentConfirmationServiceTest {
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
 
         assertThatThrownBy(() ->
-                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, 999L)))
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, 999L, ORDER_ID)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PAYMENT_AUTHORIZATION_FAILED);
+
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        verifyNoInteractions(paymentCompensationService);
+        verifyNoInteractions(mockOrderService);
+    }
+
+    @Test
+    @DisplayName("orderId 불일치(PM010) → 보상 미호출, 예외만 재 throw")
+    void confirm_order_id_mismatch_skips_compensation() {
+        Payment payment = pendingPayment(9_000L, 1_000L);
+        when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
+        when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
+
+        assertThatThrownBy(() ->
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, 999L)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.PAYMENT_ORDER_MISMATCH);
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
         verifyNoInteractions(paymentCompensationService);
@@ -140,7 +158,7 @@ class PaymentConfirmationServiceTest {
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
 
         assertThatThrownBy(() ->
-                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID)))
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PORTONE_PAYMENT_NOT_PAID);
@@ -157,7 +175,7 @@ class PaymentConfirmationServiceTest {
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
 
         assertThatThrownBy(() ->
-                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID)))
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
@@ -172,7 +190,7 @@ class PaymentConfirmationServiceTest {
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID)))
+                service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PAYMENT_NOT_FOUND);
@@ -187,7 +205,7 @@ class PaymentConfirmationServiceTest {
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(10_000L));
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
 
-        service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID));
+        service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
 
         verify(mockPointService, never()).deductPoints(any(), anyLong());
         verify(mockOrderService).completeOrder(ORDER_ID);
