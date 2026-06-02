@@ -124,6 +124,15 @@ public class Payment extends BaseEntity {
         }
     }
 
+    public void verifyOrderId(Long requestedOrderId) {
+        if (requestedOrderId == null || !this.orderId.equals(requestedOrderId)) {
+            throw BusinessException.withDetail(
+                    ErrorCode.PAYMENT_ORDER_MISMATCH,
+                    "paymentOrderId=" + orderId + ", requestedOrderId=" + requestedOrderId
+            );
+        }
+    }
+
     public void verifyPortOneStatus(PortOnePaymentStatus portoneStatus) {
         if (portoneStatus != PortOnePaymentStatus.PAID) {
             throw BusinessException.withDetail(

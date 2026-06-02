@@ -56,7 +56,7 @@ class PaymentConfirmationServiceIntegrationTest {
         given(portOnePaymentQueryPort.query(portoneId)).willReturn(info);
 
         PaymentConfirmationResult result = paymentConfirmationService.confirm(
-                new PaymentConfirmationCommand(portoneId, 100L));
+                new PaymentConfirmationCommand(portoneId, 100L, 1L));
 
         assertThat(result.alreadyCompleted()).isFalse();
         Payment fromDb = paymentRepository.findById(saved.getId()).orElseThrow();
@@ -79,7 +79,7 @@ class PaymentConfirmationServiceIntegrationTest {
         given(portOnePaymentQueryPort.query(portoneId)).willReturn(info);
 
         PaymentConfirmationResult result = paymentConfirmationService.confirm(
-                new PaymentConfirmationCommand(portoneId, 200L));
+                new PaymentConfirmationCommand(portoneId, 200L, 2L));
 
         assertThat(result.alreadyCompleted()).isTrue();
         Payment fromDb = paymentRepository.findById(payment.getId()).orElseThrow();
@@ -100,7 +100,7 @@ class PaymentConfirmationServiceIntegrationTest {
         given(portOnePaymentQueryPort.query(portoneId)).willReturn(info);
 
         assertThatThrownBy(() -> paymentConfirmationService.confirm(
-                new PaymentConfirmationCommand(portoneId, 300L)))
+                new PaymentConfirmationCommand(portoneId, 300L, 3L)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);

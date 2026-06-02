@@ -224,6 +224,41 @@ class PaymentTest {
     }
 
     @Nested
+    @DisplayName("verifyOrderId")
+    class VerifyOrderId {
+
+        @Test
+        @DisplayName("동일 orderId → 정상 통과")
+        void same_order_passes() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            payment.verifyOrderId(ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("다른 orderId → BusinessException(PM010)")
+        void different_order_throws_pm010() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            assertThatThrownBy(() -> payment.verifyOrderId(999L))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PAYMENT_ORDER_MISMATCH);
+        }
+
+        @Test
+        @DisplayName("null orderId → BusinessException(PM010)")
+        void null_order_throws_pm010() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            assertThatThrownBy(() -> payment.verifyOrderId(null))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PAYMENT_ORDER_MISMATCH);
+        }
+    }
+
+    @Nested
     @DisplayName("verifyPortOneStatus")
     class VerifyPortOneStatus {
 
