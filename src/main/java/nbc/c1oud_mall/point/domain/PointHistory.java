@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import nbc.c1oud_mall.common.domain.BaseEntity;
 import nbc.c1oud_mall.order.domain.Order;
 import nbc.c1oud_mall.payment.domain.Payment;
 
@@ -12,7 +13,7 @@ import nbc.c1oud_mall.payment.domain.Payment;
 @Table(name = "point_histories")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class PointHistory {
+public class PointHistory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,7 +21,7 @@ public class PointHistory {
 
     //@ManyToOne(fetch = FetchType.LAZY)
     @Column(name = "user_id", nullable = false)
-    private Long user;
+    private Long userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
@@ -31,8 +32,8 @@ public class PointHistory {
     private Payment payment;
 
     //@ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "refund_id", nullable = false)
-    private Long refund;
+    @Column(name = "refund_id", nullable = false)
+    private Long refundId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false, length = 20)
@@ -48,11 +49,11 @@ public class PointHistory {
     private String description;
 
     @Builder
-    public PointHistory(Long user, Order order, Payment payment, Long refund, PointTransactionType transactionType, Long amount, Long balanceAfter, String description) {
-        this.user = user;
+    public PointHistory(Long userId, Order order, Payment payment, Long refundId, PointTransactionType transactionType, Long amount, Long balanceAfter, String description) {
+        this.userId = userId;
         this.order = order;
         this.payment = payment;
-        this.refund = refund;
+        this.refundId = refundId;
         this.transactionType = transactionType;
         this.amount = amount;
         this.balanceAfter = balanceAfter;

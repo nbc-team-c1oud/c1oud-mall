@@ -17,6 +17,13 @@ public enum ErrorCode {
     // ─── 상품 ───
     PRODUCT_NOT_FOUND("PRD001", "존재하지 않는 상품입니다.", HttpStatus.NOT_FOUND),
     INSUFFICIENT_STOCK("PRD002", "요청 상품 재고가 없습니다.", HttpStatus.BAD_REQUEST),
+    INVALID_PRICE("PRD003", "가격은 0 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+    INVALID_STOCK("PRD004", "재고는 0 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
+
+    // ─── 장바구니 ───
+    CART_EMPTY("CT001", "장바구니가 비어있습니다.", HttpStatus.BAD_REQUEST),
+    CART_ITEM_NOT_FOUND("CT002", "장바구니 항목을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    INVALID_QUANTITY("CT003", "수량은 1 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
 
     // ─── 사용자 ───
     EMAIL_DUPLICATE("U001", "이미 사용 중인 이메일입니다.", HttpStatus.CONFLICT),
