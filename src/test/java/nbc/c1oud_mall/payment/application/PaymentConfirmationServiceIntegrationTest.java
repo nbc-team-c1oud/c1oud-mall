@@ -1,5 +1,7 @@
 package nbc.c1oud_mall.payment.application;
 
+import nbc.c1oud_mall.common.exception.BusinessException;
+import nbc.c1oud_mall.common.exception.ErrorCode;
 import nbc.c1oud_mall.payment.application.dto.PaymentConfirmationResult;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
@@ -10,6 +12,7 @@ import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -17,7 +20,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 class PaymentConfirmationServiceIntegrationTest {
@@ -30,6 +35,9 @@ class PaymentConfirmationServiceIntegrationTest {
 
     @MockitoBean
     private PortOnePaymentQueryPort portOnePaymentQueryPort;
+
+    @MockitoBean
+    private PortOnePaymentCancelPort portOnePaymentCancelPort;
 
     @AfterEach
     void cleanup() {
@@ -77,5 +85,31 @@ class PaymentConfirmationServiceIntegrationTest {
         Payment fromDb = paymentRepository.findById(payment.getId()).orElseThrow();
         assertThat(fromDb.getPgTxId()).isEqualTo("pg-tx-existing");
         assertThat(fromDb.getConfirmedAt()).isEqualTo(LocalDateTime.of(2026, 1, 1, 0, 0));
+    }
+
+    @Test
+    @DisplayName("금액 불일치(PM001) 보상: 메인 TX 롤백되지만 REQUIRES_NEW 보상은 commit → FAILED 영속, PortOne cancel 호출")
+    void compensation_persists_failed_status_via_requires_new() {
+        Payment saved = paymentRepository.saveAndFlush(
+                Payment.of(3L, 300L, 10_000L, 9_000L, 1_000L));
+        String portoneId = saved.getPortonePaymentId();
+
+        // PortOne은 9_000 보고했어야 하지만 위조된 8_999 시뮬레이션
+        PortOnePaymentInfo info = new PortOnePaymentInfo(
+                portoneId, PortOnePaymentStatus.PAID, 8_999L, "TOSSPAYMENTS", "pg-tx-mismatch");
+        given(portOnePaymentQueryPort.query(portoneId)).willReturn(info);
+
+        assertThatThrownBy(() -> paymentConfirmationService.confirm(
+                new PaymentConfirmationCommand(portoneId, 300L)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+
+        Payment fromDb = paymentRepository.findById(saved.getId()).orElseThrow();
+        assertThat(fromDb.getStatus()).isEqualTo(PaymentStatus.FAILED);
+        assertThat(fromDb.getPgTxId()).isNull();
+        assertThat(fromDb.getConfirmedAt()).isNull();
+
+        verify(portOnePaymentCancelPort).cancel(Mockito.eq(portoneId), Mockito.anyString());
     }
 }

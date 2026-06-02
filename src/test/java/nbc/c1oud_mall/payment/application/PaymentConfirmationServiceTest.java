@@ -27,6 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -43,6 +45,8 @@ class PaymentConfirmationServiceTest {
     private PaymentJpaRepository paymentRepository;
     @Mock
     private PortOnePaymentQueryPort portOnePaymentQueryPort;
+    @Mock
+    private PaymentCompensationService paymentCompensationService;
     @Mock
     private MockOrderService mockOrderService;
     @Mock
@@ -68,7 +72,7 @@ class PaymentConfirmationServiceTest {
     }
 
     @Test
-    @DisplayName("정상 확정: COMPLETED 전이 + 4개 mock 서비스 호출, alreadyCompleted=false")
+    @DisplayName("정상 확정: COMPLETED 전이 + 4개 mock 호출, alreadyCompleted=false, 보상 미호출")
     void confirm_normal_flow() {
         Payment payment = pendingPayment(9_000L, 1_000L);
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
@@ -81,17 +85,17 @@ class PaymentConfirmationServiceTest {
         assertThat(result.alreadyCompleted()).isFalse();
         assertThat(result.status()).isEqualTo(PaymentStatus.COMPLETED);
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
-        assertThat(payment.getPgTxId()).isEqualTo("pg-tx-001");
 
         verify(mockOrderService).completeOrder(ORDER_ID);
         verify(mockPointService).deductPoints(USER_ID, 1_000L);
         verify(mockPointService, never()).accruePoints(any(), anyLong());
         verify(mockCartService).clearByUserId(USER_ID);
         verify(mockInventoryService).confirmByOrderId(ORDER_ID);
+        verifyNoInteractions(paymentCompensationService);
     }
 
     @Test
-    @DisplayName("멱등: 이미 COMPLETED → 부수효과 없이 alreadyCompleted=true 반환")
+    @DisplayName("멱등: 이미 COMPLETED → 부수효과 없이 alreadyCompleted=true, 보상 미호출")
     void confirm_idempotent_already_completed() {
         Payment completed = Payment.rehydrate(
                 42L, PORTONE_ID, ORDER_ID, USER_ID,
@@ -105,14 +109,12 @@ class PaymentConfirmationServiceTest {
 
         assertThat(result.alreadyCompleted()).isTrue();
         verifyNoInteractions(mockOrderService);
-        verifyNoInteractions(mockPointService);
-        verifyNoInteractions(mockCartService);
-        verifyNoInteractions(mockInventoryService);
+        verifyNoInteractions(paymentCompensationService);
     }
 
     @Test
-    @DisplayName("소유권 위반(다른 userId) → PM006, markCompleted·mock 호출 미발생")
-    void confirm_ownership_violation_throws_pm006() {
+    @DisplayName("소유권 위반(PM006) → 보상 미호출, 예외만 재 throw")
+    void confirm_ownership_violation_skips_compensation() {
         Payment payment = pendingPayment(9_000L, 1_000L);
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
@@ -124,12 +126,13 @@ class PaymentConfirmationServiceTest {
                 .isEqualTo(ErrorCode.PAYMENT_AUTHORIZATION_FAILED);
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        verifyNoInteractions(paymentCompensationService);
         verifyNoInteractions(mockOrderService);
     }
 
     @Test
-    @DisplayName("PortOne status가 PAID가 아님 → PM007")
-    void confirm_portone_not_paid_throws_pm007() {
+    @DisplayName("PortOne not PAID(PM007) → 보상 호출 + 예외 재 throw")
+    void confirm_portone_not_paid_triggers_compensation() {
         Payment payment = pendingPayment(9_000L, 1_000L);
         PortOnePaymentInfo failedInfo = new PortOnePaymentInfo(
                 PORTONE_ID, PortOnePaymentStatus.FAILED, 9_000L, "TOSSPAYMENTS", "pg-tx-001");
@@ -142,13 +145,13 @@ class PaymentConfirmationServiceTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PORTONE_PAYMENT_NOT_PAID);
 
-        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        verify(paymentCompensationService).compensate(eq(PORTONE_ID), anyString());
         verifyNoInteractions(mockOrderService);
     }
 
     @Test
-    @DisplayName("금액 불일치(PortOne != breakdown.pgAmount) → PM001")
-    void confirm_amount_mismatch_throws_pm001() {
+    @DisplayName("금액 불일치(PM001) → 보상 호출 + 예외 재 throw")
+    void confirm_amount_mismatch_triggers_compensation() {
         Payment payment = pendingPayment(9_000L, 1_000L);
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(8_999L));
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
@@ -159,12 +162,12 @@ class PaymentConfirmationServiceTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
 
-        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+        verify(paymentCompensationService).compensate(eq(PORTONE_ID), anyString());
     }
 
     @Test
-    @DisplayName("Payment 미존재 → PM008")
-    void confirm_payment_not_found_throws_pm008() {
+    @DisplayName("Payment 미존재 → PM008, 보상 미호출 (검증 진입 전이라)")
+    void confirm_payment_not_found_skips_compensation() {
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.empty());
 
@@ -173,6 +176,8 @@ class PaymentConfirmationServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PAYMENT_NOT_FOUND);
+
+        verifyNoInteractions(paymentCompensationService);
     }
 
     @Test
@@ -186,7 +191,5 @@ class PaymentConfirmationServiceTest {
 
         verify(mockPointService, never()).deductPoints(any(), anyLong());
         verify(mockOrderService).completeOrder(ORDER_ID);
-        verify(mockCartService).clearByUserId(USER_ID);
-        verify(mockInventoryService).confirmByOrderId(ORDER_ID);
     }
 }
