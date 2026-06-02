@@ -1,6 +1,7 @@
 package nbc.c1oud_mall.payment.infrastructure;
 
 import nbc.c1oud_mall.common.config.JpaConfig;
+import nbc.c1oud_mall.common.config.QuerydslConfig;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @AutoConfigureTestDatabase
-@Import(JpaConfig.class)
+@Import({JpaConfig.class, QuerydslConfig.class})
 class PaymentJpaRepositoryTest {
 
     @Autowired
