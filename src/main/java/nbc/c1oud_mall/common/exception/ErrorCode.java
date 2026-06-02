@@ -19,7 +19,12 @@ public enum ErrorCode {
     INSUFFICIENT_STOCK("PRD002", "요청 상품 재고가 없습니다.", HttpStatus.BAD_REQUEST),
 
     // ─── 사용자 ───
-    // (도메인 작업 시 추가)
+    EMAIL_DUPLICATE("U001", "이미 사용 중인 이메일입니다.", HttpStatus.CONFLICT),
+    INVALID_CREDENTIALS("U002", "이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED),
+    USER_NOT_FOUND("U003", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
+    MISSING_TOKEN("U004", "인증 토큰이 없습니다.", HttpStatus.UNAUTHORIZED),
+    INVALID_TOKEN("U005", "유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED),
+    TOKEN_EXPIRED("U006", "만료된 토큰입니다.", HttpStatus.UNAUTHORIZED),
 
     // ─── 주문 ───
     // (도메인 작업 시 추가)
