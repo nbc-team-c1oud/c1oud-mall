@@ -37,7 +37,8 @@ public enum ErrorCode {
     PORTONE_RESPONSE_INVALID("PM005", "PortOne 응답이 유효하지 않습니다.", HttpStatus.BAD_GATEWAY),
     PAYMENT_AUTHORIZATION_FAILED("PM006", "결제 소유권 검증에 실패했습니다.", HttpStatus.FORBIDDEN),
     PORTONE_PAYMENT_NOT_PAID("PM007", "PortOne 결제 상태가 PAID가 아닙니다.", HttpStatus.BAD_REQUEST),
-    PAYMENT_NOT_FOUND("PM008", "결제를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
+    PAYMENT_NOT_FOUND("PM008", "결제를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    PORTONE_CANCEL_FAILED("PM009", "PortOne 결제 취소 호출에 실패했습니다.", HttpStatus.BAD_GATEWAY);
 
     private final String code;
     private final String message;
