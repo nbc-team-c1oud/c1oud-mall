@@ -328,4 +328,43 @@ class PaymentTest {
                     .isInstanceOf(IllegalStateException.class);
         }
     }
+
+    @Nested
+    @DisplayName("markFailed")
+    class MarkFailed {
+
+        @Test
+        @DisplayName("PENDING → FAILED 전이")
+        void pending_transitions_to_failed() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            payment.markFailed("amount mismatch");
+
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+        }
+
+        @Test
+        @DisplayName("이미 COMPLETED인 결제 → IllegalStateException")
+        void already_completed_throws() {
+            Payment payment = Payment.rehydrate(
+                    1L, "p-1", ORDER_ID, USER_ID,
+                    10_000L, 9_000L, 1_000L, 90L,
+                    PaymentStatus.COMPLETED, LocalDateTime.now(), "pg-existing");
+
+            assertThatThrownBy(() -> payment.markFailed("late mismatch"))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("이미 FAILED인 결제 → IllegalStateException")
+        void already_failed_throws() {
+            Payment payment = Payment.rehydrate(
+                    1L, "p-1", ORDER_ID, USER_ID,
+                    10_000L, 9_000L, 1_000L, 0L,
+                    PaymentStatus.FAILED, null, null);
+
+            assertThatThrownBy(() -> payment.markFailed("retry"))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+    }
 }
