@@ -15,4 +15,9 @@ public class MockInventoryService {
         log.warn("[MOCK] InventoryService.confirmByOrderId called orderId={} — 실구현 도입 시 교체",
                 orderId);
     }
+
+    public void restoreByOrderId(Long orderId) {
+        log.warn("[MOCK] InventoryService.restoreByOrderId called orderId={} — 실구현 도입 시 교체",
+                orderId);
+    }
 }

@@ -14,4 +14,8 @@ public class MockOrderService {
     public void completeOrder(Long orderId) {
         log.warn("[MOCK] OrderService.completeOrder called orderId={} — 실구현 도입 시 교체", orderId);
     }
+
+    public void cancelOrder(Long orderId) {
+        log.warn("[MOCK] OrderService.cancelOrder called orderId={} — 실구현 도입 시 교체", orderId);
+    }
 }
