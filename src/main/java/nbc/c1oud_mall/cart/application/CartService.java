@@ -1,0 +1,46 @@
+package nbc.c1oud_mall.cart.application;
+
+import lombok.RequiredArgsConstructor;
+import nbc.c1oud_mall.cart.application.dto.CartItemAddRequest;
+import nbc.c1oud_mall.cart.domain.CartItem;
+import nbc.c1oud_mall.cart.infrastructure.CartItemJpaRepository;
+import nbc.c1oud_mall.common.exception.BusinessException;
+import nbc.c1oud_mall.common.exception.ErrorCode;
+import nbc.c1oud_mall.product.domain.Product;
+import nbc.c1oud_mall.product.infrastructure.ProductJpaRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class CartService {
+
+    private final CartItemJpaRepository cartItemJpaRepository;
+    private final ProductJpaRepository productJpaRepository;
+
+    @Transactional
+    public void addCartItem(Long memberId, CartItemAddRequest request) {
+        Product product = productJpaRepository.findById(request.getProductId()).orElseThrow(
+                () -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND)
+        );
+
+        Optional<CartItem> optionalCartItem = cartItemJpaRepository.findByMemberIdAndProductId(memberId, product.getId());
+
+        if (optionalCartItem.isPresent()) {
+            CartItem existingItem = optionalCartItem.get();
+            existingItem.addQuantity((request.getQuantity()));
+        } else {
+            if (product.getStockQuantity() < request.getQuantity()) {
+                throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK);
+            }
+            CartItem newItem = CartItem.builder()
+                    .memberId(memberId)
+                    .product(product)
+                    .quantity(request.getQuantity())
+                    .build();
+            cartItemJpaRepository.save(newItem);
+        }
+    }
+}
