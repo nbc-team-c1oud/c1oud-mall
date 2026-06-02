@@ -36,4 +36,22 @@ public class OrderItem {
     @Column(name = "refunded_quantity", nullable = false)
     private Integer refundedQuantity = 0;
 
+    public OrderItem(Product product, String productNameSnapshot, Long priceSnapshot, Integer quantity) {
+        this.product = product;
+        this.productNameSnapshot = productNameSnapshot;
+        this.priceSnapshot = priceSnapshot;
+        this.quantity = quantity;
+    }
+
+    void setOrder(Order order) {
+        this.order = order;
+    }
+
+    public Long getSubtotal() {
+        return priceSnapshot * quantity;
+    }
+
+    public Long getProductId(){
+        return this.product.getId();
+    }
 }

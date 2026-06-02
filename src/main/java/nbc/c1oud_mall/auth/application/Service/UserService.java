@@ -32,4 +32,9 @@ public class UserService {
 			user.getUpdatedAt()
 		);
 	}
+
+	public User findById(Long userId) {
+		return userRepository.findById(userId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+	}
 }
