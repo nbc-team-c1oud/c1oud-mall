@@ -152,4 +152,180 @@ class PaymentTest {
             assertThat(payment.getPgTxId()).isEqualTo("pg-tx-001");
         }
     }
+
+    @Nested
+    @DisplayName("isCompleted")
+    class IsCompleted {
+
+        @Test
+        @DisplayName("status COMPLETED → true")
+        void completed_returns_true() {
+            Payment payment = Payment.rehydrate(
+                    1L, "p-1", ORDER_ID, USER_ID,
+                    10_000L, 9_000L, 1_000L, 0L,
+                    PaymentStatus.COMPLETED, LocalDateTime.now(), "pg-1");
+
+            assertThat(payment.isCompleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("status PENDING → false")
+        void pending_returns_false() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            assertThat(payment.isCompleted()).isFalse();
+        }
+
+        @Test
+        @DisplayName("status FAILED → false")
+        void failed_returns_false() {
+            Payment payment = Payment.rehydrate(
+                    1L, "p-1", ORDER_ID, USER_ID,
+                    10_000L, 9_000L, 1_000L, 0L,
+                    PaymentStatus.FAILED, null, null);
+
+            assertThat(payment.isCompleted()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("verifyOwnership")
+    class VerifyOwnership {
+
+        @Test
+        @DisplayName("동일 userId → 정상 통과")
+        void same_user_passes() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            payment.verifyOwnership(USER_ID);
+        }
+
+        @Test
+        @DisplayName("다른 userId → BusinessException(PM006)")
+        void different_user_throws_pm006() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            assertThatThrownBy(() -> payment.verifyOwnership(999L))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PAYMENT_AUTHORIZATION_FAILED);
+        }
+
+        @Test
+        @DisplayName("null userId → BusinessException(PM006)")
+        void null_user_throws_pm006() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            assertThatThrownBy(() -> payment.verifyOwnership(null))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PAYMENT_AUTHORIZATION_FAILED);
+        }
+    }
+
+    @Nested
+    @DisplayName("verifyPortOneStatus")
+    class VerifyPortOneStatus {
+
+        @Test
+        @DisplayName("PAID → 정상 통과")
+        void paid_passes() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            payment.verifyPortOneStatus(nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus.PAID);
+        }
+
+        @Test
+        @DisplayName("FAILED → BusinessException(PM007)")
+        void failed_throws_pm007() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            assertThatThrownBy(() -> payment.verifyPortOneStatus(
+                    nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus.FAILED))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PORTONE_PAYMENT_NOT_PAID);
+        }
+
+        @Test
+        @DisplayName("READY → BusinessException(PM007)")
+        void ready_throws_pm007() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            assertThatThrownBy(() -> payment.verifyPortOneStatus(
+                    nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus.READY))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PORTONE_PAYMENT_NOT_PAID);
+        }
+    }
+
+    @Nested
+    @DisplayName("verifyAmount")
+    class VerifyAmount {
+
+        @Test
+        @DisplayName("PortOne totalAmount == breakdown.pgAmount → 정상 통과")
+        void matching_amount_passes() {
+            // breakdown.pgAmount = 9_000L
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            payment.verifyAmount(9_000L);
+        }
+
+        @Test
+        @DisplayName("PortOne totalAmount != breakdown.pgAmount → BusinessException(PM001)")
+        void mismatch_throws_pm001() {
+            // breakdown.pgAmount = 9_000L, PortOne 8_999L (위변조 시뮬레이션)
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+
+            assertThatThrownBy(() -> payment.verifyAmount(8_999L))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
+        }
+    }
+
+    @Nested
+    @DisplayName("markCompleted")
+    class MarkCompleted {
+
+        @Test
+        @DisplayName("PENDING → COMPLETED 전이 + pgTxId·pointEarnedAmount·confirmedAt 세팅")
+        void pending_transitions_to_completed() {
+            Payment payment = Payment.of(ORDER_ID, USER_ID, 10_000L, 9_000L, 1_000L);
+            LocalDateTime now = LocalDateTime.of(2026, 6, 1, 12, 0);
+
+            payment.markCompleted("pg-tx-100", 90L, now);
+
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+            assertThat(payment.getPgTxId()).isEqualTo("pg-tx-100");
+            assertThat(payment.getPointEarnedAmount()).isEqualTo(90L);
+            assertThat(payment.getConfirmedAt()).isEqualTo(now);
+        }
+
+        @Test
+        @DisplayName("이미 COMPLETED인 결제 → IllegalStateException")
+        void already_completed_throws() {
+            Payment payment = Payment.rehydrate(
+                    1L, "p-1", ORDER_ID, USER_ID,
+                    10_000L, 9_000L, 1_000L, 90L,
+                    PaymentStatus.COMPLETED, LocalDateTime.now(), "pg-existing");
+
+            assertThatThrownBy(() -> payment.markCompleted("pg-new", 100L, LocalDateTime.now()))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("FAILED 상태 → IllegalStateException")
+        void failed_throws() {
+            Payment payment = Payment.rehydrate(
+                    1L, "p-1", ORDER_ID, USER_ID,
+                    10_000L, 9_000L, 1_000L, 0L,
+                    PaymentStatus.FAILED, null, null);
+
+            assertThatThrownBy(() -> payment.markCompleted("pg-new", 0L, LocalDateTime.now()))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+    }
 }
