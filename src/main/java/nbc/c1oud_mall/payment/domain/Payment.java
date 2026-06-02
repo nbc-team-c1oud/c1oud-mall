@@ -153,4 +153,13 @@ public class Payment extends BaseEntity {
         this.pointEarnedAmount = pointEarnedAmount;
         this.confirmedAt = confirmedAt;
     }
+
+    public void markFailed(String reason) {
+        if (status != PaymentStatus.PENDING) {
+            throw new IllegalStateException(
+                    "Payment status must be PENDING to mark failed, but was " + status
+            );
+        }
+        this.status = PaymentStatus.FAILED;
+    }
 }

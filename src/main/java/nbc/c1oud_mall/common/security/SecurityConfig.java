@@ -23,16 +23,21 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
-			// CSRF 비활성화
+			// CSRF 비활성화 (REST API + 토큰 기반)
 			.csrf(csrf -> csrf.disable())
 
-			// session 비활성화
+			// 세션 STATELESS (JWT 기반)
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/v1/auth/**").permitAll()
+				.requestMatchers("/api/v1/products/**").permitAll()
+				.requestMatchers("/h2-console/**").permitAll()
 				.anyRequest().authenticated()
 			)
+
+			// H2 콘솔 UI가 iframe 내부에서 동작하도록
+			.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
 
 			.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
@@ -42,6 +47,4 @@ public class SecurityConfig {
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
-
-
 }

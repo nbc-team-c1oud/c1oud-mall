@@ -24,6 +24,7 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase {
 
     private final PaymentJpaRepository paymentRepository;
     private final PortOnePaymentQueryPort portOnePaymentQueryPort;
+    private final PaymentCompensationService paymentCompensationService;
     private final MockOrderService mockOrderService;
     private final MockPointService mockPointService;
     private final MockCartService mockCartService;
@@ -43,9 +44,17 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase {
             return PaymentConfirmationResult.alreadyCompleted(payment);
         }
 
-        payment.verifyOwnership(command.requestUserId());
-        payment.verifyPortOneStatus(info.status());
-        payment.verifyAmount(info.totalAmount());
+        try {
+            payment.verifyOwnership(command.requestUserId());
+            payment.verifyPortOneStatus(info.status());
+            payment.verifyAmount(info.totalAmount());
+        } catch (BusinessException ex) {
+            if (isCompensable(ex)) {
+                paymentCompensationService.compensate(
+                        command.portonePaymentId(), ex.getMessage());
+            }
+            throw ex;
+        }
 
         long pointEarnedAmount = 0L;
         payment.markCompleted(info.pgTxId(), pointEarnedAmount, LocalDateTime.now());
@@ -62,5 +71,11 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase {
         mockInventoryService.confirmByOrderId(payment.getOrderId());
 
         return PaymentConfirmationResult.confirmed(payment);
+    }
+
+    private boolean isCompensable(BusinessException ex) {
+        ErrorCode code = ex.getErrorCode();
+        return code == ErrorCode.PAYMENT_AMOUNT_MISMATCH
+                || code == ErrorCode.PORTONE_PAYMENT_NOT_PAID;
     }
 }
