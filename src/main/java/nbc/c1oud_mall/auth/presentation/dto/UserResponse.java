@@ -1,5 +1,7 @@
 package nbc.c1oud_mall.auth.presentation.dto;
 
+import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -12,4 +14,6 @@ public class UserResponse {
 	private String phoneNumber;
 	private String role;
 	private int pointBalance;
+	private LocalDateTime createdAt;
+	private LocalDateTime updatedAt;
 }

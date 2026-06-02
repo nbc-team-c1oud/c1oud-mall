@@ -1,5 +1,8 @@
 package nbc.c1oud_mall.auth.domain.entity;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,12 +15,13 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import nbc.c1oud_mall.auth.domain.UserRole;
+import nbc.c1oud_mall.common.domain.BaseEntity;
 
 @Getter
 @Entity
 @Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+public class User extends BaseEntity {
 
 	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -40,6 +44,8 @@ public class User {
 
 	@Column(nullable = false)
 	private int pointBalance;
+
+	private LocalDateTime deletedAt;
 
 	public User (String email, String password, String name, String phoneNumber) {
 		this.email = email;
