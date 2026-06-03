@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class PaymentConfirmationService implements PaymentConfirmationUseCase {
+public class PaymentConfirmationService implements PaymentConfirmationUseCase, PaymentWebhookUseCase {
 
     private final PaymentJpaRepository paymentRepository;
     private final PortOnePaymentQueryPort portOnePaymentQueryPort;
@@ -72,6 +72,16 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase {
         mockInventoryService.confirmByOrderId(payment.getOrderId());
 
         return PaymentConfirmationResult.confirmed(payment);
+    }
+
+    @Override
+    public PaymentConfirmationResult handleWebhook(String portonePaymentId) {
+        Payment payment = paymentRepository.findByPortonePaymentId(portonePaymentId)
+                .orElseThrow(() -> BusinessException.withDetail(
+                        ErrorCode.PAYMENT_NOT_FOUND,
+                        "portonePaymentId=" + portonePaymentId));
+        return confirm(new PaymentConfirmationCommand(
+                portonePaymentId, payment.getUserId(), payment.getOrderId()));
     }
 
     private boolean isCompensable(BusinessException ex) {
