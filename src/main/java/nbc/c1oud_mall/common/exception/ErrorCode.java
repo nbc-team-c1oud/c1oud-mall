@@ -20,11 +20,6 @@ public enum ErrorCode {
     INVALID_PRICE("PRD003", "가격은 0 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
     INVALID_STOCK("PRD004", "재고는 0 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
 
-    // ─── 장바구니 ───
-    CART_EMPTY("CT001", "장바구니가 비어있습니다.", HttpStatus.BAD_REQUEST),
-    CART_ITEM_NOT_FOUND("CT002", "장바구니 항목을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
-    INVALID_QUANTITY("CT003", "수량은 1 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
-
     // ─── 사용자 ───
     EMAIL_DUPLICATE("U001", "이미 사용 중인 이메일입니다.", HttpStatus.CONFLICT),
     INVALID_CREDENTIALS("U002", "이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED),
@@ -36,9 +31,12 @@ public enum ErrorCode {
     // ─── 장바구니 ───
     CART_ITEM_NOT_FOUND("CRT001", "장바구니 상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     CART_ACCESS_DENIED("CRT002", "해당 장바구니에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    CART_EMPTY("CT003", "장바구니가 비어있습니다.", HttpStatus.BAD_REQUEST),
+    INVALID_QUANTITY("CT004", "수량은 1 이상이어야 합니다.", HttpStatus.BAD_REQUEST),
 
     // ─── 주문 ───
-    // (도메인 작업 시 추가)
+    ORDER_NOT_FOUND("OD001", "주문을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    INVALID_ORDER_STATUS("OD002", "유효하지 않은 주문 상태 변경입니다.", HttpStatus.BAD_REQUEST),
 
     // ─── 결제 ───
     PAYMENT_AMOUNT_MISMATCH("PM001", "결제 금액이 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
