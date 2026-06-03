@@ -4,13 +4,14 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import nbc.c1oud_mall.common.domain.BaseEntity;
 import nbc.c1oud_mall.product.domain.Product;
 
 @Entity
 @Table(name = "order_items")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class OrderItem {
+public class OrderItem extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -5,10 +5,7 @@ import nbc.c1oud_mall.auth.application.Service.UserService;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.common.exception.BusinessException;
 import nbc.c1oud_mall.common.exception.ErrorCode;
-import nbc.c1oud_mall.order.application.dto.GetOrderItemPreviewResponse;
-import nbc.c1oud_mall.order.application.dto.GetOrderPreviewResponse;
-import nbc.c1oud_mall.order.application.dto.OrderCheckoutRequest;
-import nbc.c1oud_mall.order.application.dto.OrderCheckoutResponse;
+import nbc.c1oud_mall.order.application.dto.*;
 import nbc.c1oud_mall.order.domain.Order;
 import nbc.c1oud_mall.order.domain.OrderItem;
 import nbc.c1oud_mall.order.infrastructure.mock.OMockCartItem;
@@ -21,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -32,7 +30,7 @@ public class OrderFacade {
     private final OMockCartService oMockCartService;
     private final OMockPaymentService oMockPaymentService;
 
-    String payment;
+    String oMockpayment;
 
     //주문서 미리보기 : 재고 차감/주문 생성 없는 읽기 전용
     public GetOrderPreviewResponse getOrderPreview(Long userId, List<Long> cartItemsIds) {
@@ -106,7 +104,7 @@ public class OrderFacade {
         //7. 응답
         return new OrderCheckoutResponse(
                 order.getId(),
-                payment,
+                oMockpayment,
                 order.getOrderNumber(),
                 order.getOrderName(),
                 order.getOrderStatus().name(),
@@ -114,21 +112,40 @@ public class OrderFacade {
         );
     }
 
-    //CartItemTestEntity 임시
+    //임시
+    public List<OrderResponse> getOrdersMe(Long userId) {
+        List<Order> orders = orderService.findOrderEntities(userId);
+        List<Long> orderIds = orders.stream().map(Order::getId).toList();
+        //결제 서비스에서 주문 목록에 결제 ID 붙이기 위한 조회 기능 추가하여 연결
+        Long oMockpaymentId = 0L;
+
+        return orders.stream()
+                .map(order -> orderService.toResponse(order, oMockpaymentId)).toList();
+    }
+
+    public OrderByOrderIdResponse getOrder(Long userId, Long orderId) {
+        Order order = orderService.findOrderEntity(orderId);
+        if (!order.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND);
+        }
+
+        //결제 서비스에서 주문 목록에 결제 ID 붙이기 위한 조회 기능 추가하여 연결
+        Long oMockpaymentId = 0L;
+
+        return orderService.toOrderResponse(order, oMockpaymentId);
+    }
+
+    //장바구니 서비스에 넣어야함
     private List<OMockCartItem> getValidateCartItems(Long userId, List<Long> cartItemsIds) {
         // cartItemsIds이 비어있으면 "전체 장바구니"
         List<OMockCartItem> cartItems = cartItemsIds.isEmpty()
                 ? oMockCartService.findCartEntities(userId)
                 : oMockCartService.findCartEntitiesByIds(userId, cartItemsIds);
 
-        // 1차 검증 : 주문할 아이템이 하나도 없으면 주문서 자체 미성립
-        // (전체 조회: 빈 장바구니 / 선택 조회: 넘긴 ID가 전부 남의 것/없는 것 일때도 여기로 떨어짐)
-
         if (cartItems.isEmpty()) {
             throw new BusinessException(ErrorCode.CART_EMPTY);
         }
 
-        // 2차 검증 : 요청한 ID 개수와 조회된 개수가 다르다 -> 일부가 "남의 것" 또는 "존재하지 않는 ID"다.
         if (!cartItemsIds.isEmpty() && cartItems.size() != cartItemsIds.size()) {
             throw new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND);
         }
