@@ -10,6 +10,9 @@ spring:
 portone:
   base-url: ${PORTONE_BASE_URL:https://api.portone.io}
   secret: ${PORTONE_API_SECRET:}
+  # PortOne 콘솔에서 발급한 웹훅 시크릿. 형식: whsec_<base64>
+  # 기본값은 로컬 기동용 더미(base64 유효한 placeholder). 운영은 환경변수로 오버라이드.
+  webhook-secret: ${PORTONE_WEBHOOK_SECRET:whsec_ZGV2LXBsYWNlaG9sZGVyLXNlY3JldC1mb3ItYm9vdC1vbmx5}
 
 # SpringDoc / Swagger — Spring Boot 4 호환 버전 출시 후 재도입 예정
 
