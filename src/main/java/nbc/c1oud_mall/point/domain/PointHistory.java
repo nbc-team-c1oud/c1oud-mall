@@ -32,7 +32,7 @@ public class PointHistory extends BaseEntity {
     private Payment payment;
 
     //@ManyToOne(fetch = FetchType.LAZY)
-    @Column(name = "refund_id", nullable = false)
+    @Column(name = "refund_id")
     private Long refundId;
 
     @Enumerated(EnumType.STRING)

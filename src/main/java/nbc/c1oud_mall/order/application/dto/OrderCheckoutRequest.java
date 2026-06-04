@@ -10,8 +10,10 @@ import java.util.List;
 public class OrderCheckoutRequest {
 
     private List<Long> cartItemIds = List.of();
+    private Long pointUsedAmount = 0L;
 
-    public OrderCheckoutRequest(List<Long> cartItems) {
-        this.cartItemIds = cartItems != null ? cartItemIds : List.of();
+    public OrderCheckoutRequest(List<Long> cartItemIds, Long pointUsedAmount) {
+        this.cartItemIds = cartItemIds != null ? cartItemIds : List.of();
+        this.pointUsedAmount = pointUsedAmount != null ? pointUsedAmount : 0L;
     }
 }
