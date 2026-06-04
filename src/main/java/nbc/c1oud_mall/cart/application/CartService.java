@@ -64,4 +64,21 @@ public class CartService {
     public List<CartItem> findCartEntitiesByIds(Long userId, List<Long> ids) {
         return cartItemJpaRepository.findByUserIdAndCartId(userId, ids);
     }
+
+    @Transactional
+    public void deleteCartItem(Long memberId, Long cartItemId) {
+        CartItem cartItem = cartItemJpaRepository.findById(cartItemId).orElseThrow(
+                () -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND)
+        );
+
+        cartItem.validateOwner(memberId);
+
+        cartItemJpaRepository.delete(cartItem);
+    }
+
+    @Transactional
+    public void clearCart(Long memberId) {
+        cartItemJpaRepository.deleteAllByMemberId(memberId);
+    }
+
 }
