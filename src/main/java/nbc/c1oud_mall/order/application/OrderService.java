@@ -23,20 +23,6 @@ public class OrderService {
 
     private final OrderJpaRepository orderJpaRepository;
 
-    @Transactional
-    public void completeOrder(Long orderId) {
-        Order order = orderJpaRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-        order.markAsConfirmed();
-    }
-
-    @Transactional
-    public void cancelOrder(Long orderId) {
-        Order order = orderJpaRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
-        order.markAsCancelled();
-    }
-
     //주문 생성
     @Transactional
     public Order createOrder(User user, Long totalPrice, List<OrderItem> orderItems) {
