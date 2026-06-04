@@ -8,9 +8,9 @@ import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
+import nbc.c1oud_mall.order.application.OrderService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockCartService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockInventoryService;
-import nbc.c1oud_mall.payment.infrastructure.mock.MockOrderService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockPointService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +26,7 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
     private final PortOnePaymentQueryPort portOnePaymentQueryPort;
     private final PaymentCompensationService paymentCompensationService;
     private final WebhookEventRegistrar webhookEventRegistrar;
-    private final MockOrderService mockOrderService;
+    private final OrderService orderService;
     private final MockPointService mockPointService;
     private final MockCartService mockCartService;
     private final MockInventoryService mockInventoryService;
@@ -61,7 +61,7 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
         long pointEarnedAmount = 0L;
         payment.markCompleted(info.pgTxId(), pointEarnedAmount, LocalDateTime.now());
 
-        mockOrderService.completeOrder(payment.getOrderId());
+        orderService.completeOrder(payment.getOrderId());
         if (payment.getBreakdown().getPointUsedAmount() > 0L) {
             mockPointService.deductPoints(payment.getUserId(),
                     payment.getBreakdown().getPointUsedAmount());
