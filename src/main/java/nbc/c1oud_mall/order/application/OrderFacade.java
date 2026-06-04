@@ -10,17 +10,17 @@ import nbc.c1oud_mall.common.exception.ErrorCode;
 import nbc.c1oud_mall.order.application.dto.*;
 import nbc.c1oud_mall.order.domain.Order;
 import nbc.c1oud_mall.order.domain.OrderItem;
-import nbc.c1oud_mall.order.infrastructure.mock.OMockCartItem;
-import nbc.c1oud_mall.order.infrastructure.mock.OMockCartService;
-import nbc.c1oud_mall.order.infrastructure.mock.OMockPaymentService;
-import nbc.c1oud_mall.payment.domain.Payment;
+import nbc.c1oud_mall.payment.application.PaymentInitiationService;
+import nbc.c1oud_mall.payment.application.dto.PaymentInitiationResult;
+import nbc.c1oud_mall.payment.application.dto.command.PaymentInitiationCommand;
 import nbc.c1oud_mall.product.domain.Product;
+import nbc.c1oud_mall.product.infrastructure.ProductJpaRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -29,11 +29,9 @@ public class OrderFacade {
 
     private final UserService userService;
     private final OrderService orderService;
-    private final OMockCartService oMockCartService;
     private final CartService cartService;
-    //private final OMockPaymentService oMockPaymentService;
-
-    String oMockpayment;
+    private final ProductJpaRepository productJpaRepository;
+    private final PaymentInitiationService paymentInitiationService;
 
     public GetOrderPreviewResponse getOrderPreview(Long userId, List<Long> cartItemsIds) {
 
@@ -46,7 +44,7 @@ public class OrderFacade {
                     Long price = cartItem.getProduct().getPrice();
                     Long subtotal = price * cartItem.getQuantity();
                     return new GetOrderItemPreviewResponse(
-                            cartItem.getId(),
+                            cartItem.getProduct().getId(),
                             cartItem.getProduct().getName(),
                             price,
                             cartItem.getQuantity(),
@@ -66,49 +64,92 @@ public class OrderFacade {
     @Transactional
     public OrderCheckoutResponse createOrder(Long userId, OrderCheckoutRequest request) {
         List<Long> cartItemIds = (request != null) ? request.getCartItemIds() : List.of();
+        Long pointUsedAmount = request != null && request.getPointUsedAmount() != null ?
+                request.getPointUsedAmount() : 0L;
 
-        //0. 회원조회
+        //0. 포인트 입력값 검증
+        validatePointAmountFormat(pointUsedAmount);
+
+        //1. 회원조회
         User user = userService.findById(userId);
 
-        //1. 장바구니 조회 (선택된 아이템만) 임시 엔티티
+        //2. 장바구니 조회 (선택된 아이템만) 임시 엔티티
         List<CartItem> cartItems = getValidateCartItems(userId, cartItemIds);
 
-        //2~3. 재고차감 + 스냅샷 OrderItem 생성
+        //3. 데드락 발생 방지를 위해 우선 정렬
+        cartItems.sort(Comparator.comparing(cartItem -> cartItem.getProduct().getId()));
+
+        //4. 재고차감 + 스냅샷 OrderItem 생성
+        //product에서 비관락 설정
         List<OrderItem> orderItems = new ArrayList<>();
 
         for (CartItem cartItem : cartItems) {
-            Product product = cartItem.getProduct();
-            product.deduckStock(cartItem.getQuantity());
+            Product product = productJpaRepository.findByIdForUpdate(cartItem.getProduct().getId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+            product.deductStock(cartItem.getQuantity());
 
             OrderItem orderItem = new OrderItem(
                     product,
                     product.getName(),
                     product.getPrice(),
-                    product.getStockQuantity()
+                    cartItem.getQuantity()
             );
             orderItems.add(orderItem);
         }
         Long totalPrice = orderItems.stream().mapToLong(OrderItem::getSubtotal).sum();
 
-        //4. 주문 저장
+        //4. 포인트 사용 가능 여부 최종 검증
+        validatePointUsage(user, pointUsedAmount, totalPrice);
+
+        Long pgAmount = totalPrice - pointUsedAmount;
+
+        //5. 주문 저장
         Order order = orderService.createOrder(user, totalPrice, orderItems);
 
-        //5. 결제 정보 생성
+        //6. 결제 사전등록 (portonePaymentId 채번)
+        PaymentInitiationResult initiation = paymentInitiationService.initiate(
+                new PaymentInitiationCommand(
+                        order.getId(),
+                        userId,
+                        totalPrice,         // totalAmount (사용자가 결제할 총액)
+                        pgAmount,           // pgAmount (PG에 청구할 금액 = totalAmount - pointUsedAmount)
+                        pointUsedAmount     // pointUsedAmount (포인트 도입 시 분리)
+                )
+        );
 
+        //7. 주문한 장바구니 아이템만 삭제 (결제에서 진행)
+        //List<Long> orderedItemIds = cartItems.stream().map(CartItem::getId).toList();
+        //cartService.clearCartItems(userId, orderedItemIds);
 
-        //6. 주문한 장바구니 아이템만 삭제
-        List<Long> orderedItemIds = cartItems.stream().map(CartItem::getId).toList();
-        oMockCartService.clearCartItems(orderedItemIds, userId);
-
-        //7. 응답
+        //8. 응답
         return new OrderCheckoutResponse(
                 order.getId(),
-                oMockpayment,
+                initiation.portonePaymentId(),
                 order.getOrderNumber(),
                 order.getOrderName(),
                 order.getOrderStatus().name(),
-                totalPrice
+                totalPrice,
+                pgAmount,
+                pointUsedAmount
         );
+    }
+
+    private void validatePointAmountFormat(Long pointUsedAmount) {
+        if (pointUsedAmount < 0) {
+            throw new BusinessException(ErrorCode.POINT_AMOUNT_INVALID);
+        }
+    }
+
+    private void validatePointUsage(User user, Long pointUsedAmount, Long totalPrice) {
+        // 총 금액보다 더 많은 포인트 사용 시 에러
+        if (pointUsedAmount > totalPrice) {
+            throw new BusinessException(ErrorCode.POINT_AMOUNT_INVALID);
+        }
+
+        //보유 포인트 부족시 에러
+        if (user.getPointBalance() < pointUsedAmount) {
+            throw new BusinessException(ErrorCode.POINT_INSUFFICIENT);
+        }
     }
 
     //임시
