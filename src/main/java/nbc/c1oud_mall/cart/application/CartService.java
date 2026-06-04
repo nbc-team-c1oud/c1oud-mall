@@ -1,6 +1,7 @@
 package nbc.c1oud_mall.cart.application;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import nbc.c1oud_mall.cart.application.dto.CartItemAddRequest;
 import nbc.c1oud_mall.cart.application.dto.CartItemUpdateRequest;
 import nbc.c1oud_mall.cart.domain.CartItem;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CartService {
@@ -81,4 +83,11 @@ public class CartService {
         cartItemJpaRepository.deleteAllByMemberId(memberId);
     }
 
+    public void clearCartItems(Long userId, List<Long> orderedItemIds) {
+        int deleted = cartItemJpaRepository.deleteAllByUserIdAndCartId(userId, orderedItemIds);
+        if (deleted != orderedItemIds.size()) {
+            log.warn("장바구니 삭제 불일치: expected={}, actual={}, memberId={}",
+                    orderedItemIds.size(), deleted, userId);
+        }
+    }
 }

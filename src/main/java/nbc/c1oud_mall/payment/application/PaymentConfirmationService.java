@@ -25,6 +25,7 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
     private final PaymentJpaRepository paymentRepository;
     private final PortOnePaymentQueryPort portOnePaymentQueryPort;
     private final PaymentCompensationService paymentCompensationService;
+    private final WebhookEventRegistrar webhookEventRegistrar;
     private final MockOrderService mockOrderService;
     private final MockPointService mockPointService;
     private final MockCartService mockCartService;
@@ -76,6 +77,15 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
 
     @Override
     public PaymentConfirmationResult handleWebhook(String portonePaymentId) {
+        // INSERT-first: (portonePaymentId, eventType) UNIQUE로 동시 중복 웹훅 차단
+        boolean registered = webhookEventRegistrar.tryRegister(portonePaymentId, "Transaction.Paid");
+        if (!registered) {
+            return paymentRepository.findByPortonePaymentId(portonePaymentId)
+                    .map(PaymentConfirmationResult::alreadyCompleted)
+                    .orElseThrow(() -> BusinessException.withDetail(
+                            ErrorCode.PAYMENT_NOT_FOUND,
+                            "portonePaymentId=" + portonePaymentId));
+        }
         Payment payment = paymentRepository.findByPortonePaymentId(portonePaymentId)
                 .orElseThrow(() -> BusinessException.withDetail(
                         ErrorCode.PAYMENT_NOT_FOUND,
