@@ -5,6 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("portone")
 public record PortOneProperties(
         String baseUrl,
-        String secret
+        String secret,
+        String webhookSecret
 ) {
 }

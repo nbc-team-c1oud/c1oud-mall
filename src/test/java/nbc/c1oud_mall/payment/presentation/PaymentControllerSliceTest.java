@@ -5,6 +5,7 @@ import nbc.c1oud_mall.common.exception.BusinessException;
 import nbc.c1oud_mall.common.exception.ErrorCode;
 import nbc.c1oud_mall.common.jwt.JwtAuthFilter;
 import nbc.c1oud_mall.payment.application.PaymentConfirmationUseCase;
+import nbc.c1oud_mall.payment.infrastructure.webhook.PortOneWebhookSignatureFilter;
 import nbc.c1oud_mall.payment.application.dto.PaymentConfirmationResult;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.presentation.dto.PaymentConfirmRequest;
@@ -29,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         controllers = PaymentController.class,
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
-                classes = JwtAuthFilter.class))
+                classes = { JwtAuthFilter.class, PortOneWebhookSignatureFilter.class }))
 @AutoConfigureMockMvc(addFilters = false)
 class PaymentControllerSliceTest {
 

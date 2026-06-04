@@ -17,6 +17,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import lombok.RequiredArgsConstructor;
 import nbc.c1oud_mall.common.jwt.JwtAuthFilter;
+import nbc.c1oud_mall.payment.infrastructure.webhook.PortOneWebhookSignatureFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -24,6 +25,7 @@ import nbc.c1oud_mall.common.jwt.JwtAuthFilter;
 public class SecurityConfig {
 
 	private final JwtAuthFilter jwtAuthFilter;
+	private final PortOneWebhookSignatureFilter portOneWebhookSignatureFilter;
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -41,6 +43,8 @@ public class SecurityConfig {
 				.requestMatchers("/api/v1/auth/**").permitAll()
 				.requestMatchers("/api/v1/products/**").permitAll()
 				.requestMatchers("/api/v1/carts/**").permitAll()
+				// 웹훅 엔드포인트는 HMAC 서명이 인증 역할 (PortOneWebhookSignatureFilter)
+				.requestMatchers("/api/v1/payments/webhooks/**").permitAll()
 				.requestMatchers("/h2-console/**").permitAll()
 				.anyRequest().authenticated()
 			)
@@ -48,6 +52,9 @@ public class SecurityConfig {
 			// H2 콘솔 UI가 iframe 내부에서 동작하도록
 			.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()))
 
+			// 두 필터 모두 UsernamePasswordAuthenticationFilter 앞에 등록.
+			// 웹훅 필터는 shouldNotFilter()로 웹훅 URL에서만 동작하므로 JWT 필터와의 상대 순서는 실질적 영향 없음.
+			.addFilterBefore(portOneWebhookSignatureFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
 	}

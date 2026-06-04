@@ -38,7 +38,7 @@ class PortOnePaymentCancelAdapterTest {
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
         this.server = MockRestServiceServer.bindTo(builder).build();
-        PortOneProperties properties = new PortOneProperties(BASE_URL, SECRET);
+        PortOneProperties properties = new PortOneProperties(BASE_URL, SECRET, null);
         this.adapter = new PortOnePaymentCancelAdapter(builder, properties);
     }
 
