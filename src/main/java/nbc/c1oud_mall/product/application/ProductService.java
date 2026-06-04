@@ -34,4 +34,14 @@ public class ProductService {
         Page<Product> products = productJpaRepository.findAllByCondition(condition, pageable);
         return products.map(ProductListResponse::from);
     }
+
+    @Transactional
+    public Product deductStockWithLock(Long productId, Integer quantity) {
+        Product product = productJpaRepository.findByIdForUpdate(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        product.deductStock(quantity);
+
+        return product;
+    }
 }
