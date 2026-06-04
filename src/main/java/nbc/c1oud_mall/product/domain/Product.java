@@ -56,7 +56,8 @@ public class Product extends BaseEntity {
         this.description = description;
     }
 
-    public void deduckStock(int quantity) {
+    //재고 유효성 검증 및 차감
+    public void deductStock(int quantity) {
         if (quantity <= 0) {
             throw new BusinessException(ErrorCode.INVALID_QUANTITY);
         }
