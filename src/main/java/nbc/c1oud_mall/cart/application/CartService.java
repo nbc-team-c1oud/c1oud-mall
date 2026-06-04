@@ -12,6 +12,7 @@ import nbc.c1oud_mall.product.infrastructure.ProductJpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -54,5 +55,13 @@ public class CartService {
         cartItem.validateOwner(memberId);
 
         cartItem.updateQuantity(request.getQuantity());
+    }
+
+    public List<CartItem> findCartEntities(Long userId) {
+        return cartItemJpaRepository.findByUserId(userId);
+    }
+
+    public List<CartItem> findCartEntitiesByIds(Long userId, List<Long> ids) {
+        return cartItemJpaRepository.findByUserIdAndCartId(userId, ids);
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface CartItemJpaRepository extends JpaRepository<CartItem, Long> {
@@ -17,4 +18,14 @@ public interface CartItemJpaRepository extends JpaRepository<CartItem, Long> {
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM CartItem c WHERE c.memberId = :memberId")
     void deleteAllByMemberId(@Param("memberId") Long memberId);
+
+    //멤버 아이디가 장바구니 멤버 아이디와 일치하면 장바구니 상품 전체 불러오기
+    //임시, 멤버 아이디를 연결해서 받아오는게 아님...
+    @Query("SELECT ci FROM CartItem ci JOIN FETCH ci.product WHERE ci.memberId = :userId")
+    List<CartItem> findByUserId(@Param("userId") Long userId);
+
+    //멤버 아이디가 장바구니 멤버 아이디와 일치하고 장바구니 아이디가 요청한 장바구니 아이디와 일치하면 해당 상품 불러오기
+    @Query("SELECT ci FROM CartItem ci JOIN FETCH ci.product WHERE ci.memberId = :userId AND ci.id IN :ids")
+    List<CartItem> findByUserIdAndCartId( @Param("userId") Long userId, @Param("ids") List<Long> ids);
+
 }
