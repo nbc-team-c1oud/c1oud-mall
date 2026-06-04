@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.common.domain.BaseEntity;
+import nbc.c1oud_mall.common.exception.BusinessException;
+import nbc.c1oud_mall.common.exception.ErrorCode;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -90,7 +92,7 @@ public class Order extends BaseEntity {
 
     private void changeStatus(OrderStatus newStatus) {
         if (!this.orderStatus.canTransitTo(newStatus)) {
-            throw new IllegalArgumentException("유효하지 않은 주문 상태 변경입니다.");
+            throw new BusinessException(ErrorCode.INVALID_ORDER_STATUS);
         }
 
         this.orderStatus = newStatus;
