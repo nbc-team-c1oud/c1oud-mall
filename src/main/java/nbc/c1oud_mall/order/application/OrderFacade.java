@@ -3,6 +3,8 @@ package nbc.c1oud_mall.order.application;
 import lombok.RequiredArgsConstructor;
 import nbc.c1oud_mall.auth.application.Service.UserService;
 import nbc.c1oud_mall.auth.domain.entity.User;
+import nbc.c1oud_mall.cart.application.CartService;
+import nbc.c1oud_mall.cart.domain.CartItem;
 import nbc.c1oud_mall.common.exception.BusinessException;
 import nbc.c1oud_mall.common.exception.ErrorCode;
 import nbc.c1oud_mall.order.application.dto.*;
@@ -28,19 +30,17 @@ public class OrderFacade {
     private final UserService userService;
     private final OrderService orderService;
     private final OMockCartService oMockCartService;
-    private final OMockPaymentService oMockPaymentService;
+    private final CartService cartService;
+    //private final OMockPaymentService oMockPaymentService;
 
     String oMockpayment;
 
-    //주문서 미리보기 : 재고 차감/주문 생성 없는 읽기 전용
     public GetOrderPreviewResponse getOrderPreview(Long userId, List<Long> cartItemsIds) {
 
-        //cartItems가 null/비어있으면 전체 장바구니, 값이 있으면 선택된 아이템만 주문서에 담음
-        List<OMockCartItem> cartItems = getValidateCartItems(
+        List<CartItem> cartItems = getValidateCartItems(
                 userId, cartItemsIds != null ? cartItemsIds : List.of()
         );
 
-        //장바구니 아이템에서 상품 가격과 장바구니 수량을 곱해서 각 아이템의 총액 구함
         List<GetOrderItemPreviewResponse> items = cartItems.stream()
                 .map(cartItem -> {
                     Long price = cartItem.getProduct().getPrice();
@@ -56,7 +56,6 @@ public class OrderFacade {
                 })
                 .toList();
 
-        //장바구니 총액 구하기
         Long totalPrice = items.stream()
                 .mapToLong(GetOrderItemPreviewResponse::getSubtotal)
                 .sum();
@@ -72,12 +71,12 @@ public class OrderFacade {
         User user = userService.findById(userId);
 
         //1. 장바구니 조회 (선택된 아이템만) 임시 엔티티
-        List<OMockCartItem> cartItems = getValidateCartItems(userId, cartItemIds);
+        List<CartItem> cartItems = getValidateCartItems(userId, cartItemIds);
 
         //2~3. 재고차감 + 스냅샷 OrderItem 생성
         List<OrderItem> orderItems = new ArrayList<>();
 
-        for (OMockCartItem cartItem : cartItems) {
+        for (CartItem cartItem : cartItems) {
             Product product = cartItem.getProduct();
             product.deduckStock(cartItem.getQuantity());
 
@@ -98,7 +97,7 @@ public class OrderFacade {
 
 
         //6. 주문한 장바구니 아이템만 삭제
-        List<Long> orderedItemIds = cartItems.stream().map(OMockCartItem::getId).toList();
+        List<Long> orderedItemIds = cartItems.stream().map(CartItem::getId).toList();
         oMockCartService.clearCartItems(orderedItemIds, userId);
 
         //7. 응답
@@ -136,11 +135,11 @@ public class OrderFacade {
     }
 
     //장바구니 서비스에 넣어야함
-    private List<OMockCartItem> getValidateCartItems(Long userId, List<Long> cartItemsIds) {
+    private List<CartItem> getValidateCartItems(Long userId, List<Long> cartItemsIds) {
         // cartItemsIds이 비어있으면 "전체 장바구니"
-        List<OMockCartItem> cartItems = cartItemsIds.isEmpty()
-                ? oMockCartService.findCartEntities(userId)
-                : oMockCartService.findCartEntitiesByIds(userId, cartItemsIds);
+        List<CartItem> cartItems = cartItemsIds.isEmpty()
+                ? cartService.findCartEntities(userId)
+                : cartService.findCartEntitiesByIds(userId, cartItemsIds);
 
         if (cartItems.isEmpty()) {
             throw new BusinessException(ErrorCode.CART_EMPTY);
