@@ -18,19 +18,9 @@ public class UserService {
 
 	@Transactional(readOnly = true)
 	public UserResponse getMe(Long userId) {
-		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+		User user = findById(userId);
 
-		return new UserResponse(
-			user.getId(),
-			user.getEmail(),
-			user.getName(),
-			user.getPhoneNumber(),
-			user.getRole().name(),
-			user.getPointBalance(),
-			user.getCreatedAt(),
-			user.getUpdatedAt()
-		);
+		return UserResponse.from(findById(userId));
 	}
 
 	public User findById(Long userId) {
