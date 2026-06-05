@@ -3,7 +3,9 @@ package nbc.c1oud_mall.cart.application;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nbc.c1oud_mall.cart.application.dto.CartItemAddRequest;
+import nbc.c1oud_mall.cart.application.dto.CartItemResponse;
 import nbc.c1oud_mall.cart.application.dto.CartItemUpdateRequest;
+import nbc.c1oud_mall.cart.application.dto.CartListResponse;
 import nbc.c1oud_mall.cart.domain.CartItem;
 import nbc.c1oud_mall.cart.infrastructure.CartItemJpaRepository;
 import nbc.c1oud_mall.common.exception.BusinessException;
@@ -59,12 +61,26 @@ public class CartService {
         cartItem.updateQuantity(request.getQuantity());
     }
 
-    public List<CartItem> findCartEntities(Long userId) {
-        return cartItemJpaRepository.findByUserId(userId);
+    @Transactional(readOnly = true)
+    public CartListResponse getCartList(Long userId) {
+        List<CartItem> cartItems = cartItemJpaRepository.findByUserId(userId);
+
+        List<CartItemResponse> itemResponses = cartItems.stream()
+                .map(CartItemResponse::new)
+                .toList();
+
+        return new CartListResponse(itemResponses);
     }
 
-    public List<CartItem> findCartEntitiesByIds(Long userId, List<Long> ids) {
-        return cartItemJpaRepository.findByUserIdAndCartId(userId, ids);
+    @Transactional(readOnly = true)
+    public CartListResponse getSelectedCartList(Long userId, List<Long> ids) {
+        List<CartItem> cartItems = cartItemJpaRepository.findByUserIdAndCartId(userId, ids);
+
+        List<CartItemResponse> itemResponses = cartItems.stream()
+                .map(CartItemResponse::new)
+                .toList();
+
+        return new CartListResponse(itemResponses);
     }
 
     @Transactional
