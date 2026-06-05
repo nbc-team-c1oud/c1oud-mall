@@ -27,12 +27,12 @@ public class CartService {
     private final ProductJpaRepository productJpaRepository;
 
     @Transactional
-    public void addCartItem(Long memberId, CartItemAddRequest request) {
+    public void addCartItem(Long userId, CartItemAddRequest request) {
         Product product = productJpaRepository.findById(request.getProductId()).orElseThrow(
                 () -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND)
         );
 
-        Optional<CartItem> optionalCartItem = cartItemJpaRepository.findByMemberIdAndProductId(memberId, product.getId());
+        Optional<CartItem> optionalCartItem = cartItemJpaRepository.findByUserIdAndProductId(userId, product.getId());
 
         if (optionalCartItem.isPresent()) {
             CartItem existingItem = optionalCartItem.get();
@@ -42,7 +42,7 @@ public class CartService {
                 throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK);
             }
             CartItem newItem = CartItem.builder()
-                    .memberId(memberId)
+                    .userId(userId)
                     .product(product)
                     .quantity(request.getQuantity())
                     .build();
@@ -51,12 +51,12 @@ public class CartService {
     }
 
     @Transactional
-    public void updateCartItemQuantity(Long memberId, Long cartItemId, CartItemUpdateRequest request) {
+    public void updateCartItemQuantity(Long userId, Long cartItemId, CartItemUpdateRequest request) {
         CartItem cartItem = cartItemJpaRepository.findById(cartItemId).orElseThrow(
                 () -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND)
         );
 
-        cartItem.validateOwner(memberId);
+        cartItem.validateOwner(userId);
 
         cartItem.updateQuantity(request.getQuantity());
     }
@@ -104,19 +104,19 @@ public class CartService {
     }
 
     @Transactional
-    public void deleteCartItem(Long memberId, Long cartItemId) {
+    public void deleteCartItem(Long userId, Long cartItemId) {
         CartItem cartItem = cartItemJpaRepository.findById(cartItemId).orElseThrow(
                 () -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND)
         );
 
-        cartItem.validateOwner(memberId);
+        cartItem.validateOwner(userId);
 
         cartItemJpaRepository.delete(cartItem);
     }
 
     @Transactional
-    public void clearCart(Long memberId) {
-        cartItemJpaRepository.deleteAllByMemberId(memberId);
+    public void clearCart(Long userId) {
+        cartItemJpaRepository.deleteAllByUserId(userId);
     }
 
     @Transactional

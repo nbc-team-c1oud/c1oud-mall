@@ -42,7 +42,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/v1/auth/**").permitAll()
 				.requestMatchers("/api/v1/products/**").permitAll()
-				.requestMatchers("/api/v1/carts/**").permitAll()
+
 				// 웹훅 엔드포인트는 HMAC 서명이 인증 역할 (PortOneWebhookSignatureFilter)
 				.requestMatchers("/api/v1/payments/webhooks/**").permitAll()
 				.requestMatchers("/h2-console/**").permitAll()
