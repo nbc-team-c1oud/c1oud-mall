@@ -38,8 +38,8 @@ public class OrderFacade {
     private final PaymentQueryService paymentQueryService;
 
     public GetOrderPreviewResponse getOrderPreview(Long userId, List<Long> cartItemsIds) {
-
-        List<CartItem> cartItems = getValidateCartItems(
+        // CartService의 검증 메서드 호출
+        List<CartItem> cartItems = cartService.getValidatedCartItemsForOrder(
                 userId, cartItemsIds != null ? cartItemsIds : List.of()
         );
 
@@ -78,7 +78,8 @@ public class OrderFacade {
         User user = userService.findById(userId);
 
         //2. 장바구니 조회 (선택된 아이템만) 임시 엔티티
-        List<CartItem> cartItems = getValidateCartItems(userId, cartItemIds);
+        // CartService의 검증 메서드 호출
+        List<CartItem> cartItems = cartService.getValidatedCartItemsForOrder(userId, cartItemIds);
 
         //3. 데드락 발생 방지를 위해 우선 정렬
         cartItems.sort(Comparator.comparing(cartItem -> cartItem.getProduct().getId()));
@@ -193,21 +194,4 @@ public class OrderFacade {
         return orderService.toResponse(order, paymentSummary);
     }
 
-    //장바구니 서비스에 넣어야함
-    private List<CartItem> getValidateCartItems(Long userId, List<Long> cartItemsIds) {
-        // cartItemsIds이 비어있으면 "전체 장바구니"
-        List<CartItem> cartItems = cartItemsIds.isEmpty()
-                ? cartService.findCartEntities(userId)
-                : cartService.findCartEntitiesByIds(userId, cartItemsIds);
-
-        if (cartItems.isEmpty()) {
-            throw new BusinessException(ErrorCode.CART_EMPTY);
-        }
-
-        if (!cartItemsIds.isEmpty() && cartItems.size() != cartItemsIds.size()) {
-            throw new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND);
-        }
-
-        return cartItems;
-    }
 }

@@ -5,12 +5,14 @@ import lombok.RequiredArgsConstructor;
 import nbc.c1oud_mall.cart.application.CartService;
 import nbc.c1oud_mall.cart.application.dto.CartItemAddRequest;
 import nbc.c1oud_mall.cart.application.dto.CartItemUpdateRequest;
+import nbc.c1oud_mall.cart.application.dto.CartListResponse;
 import nbc.c1oud_mall.common.response.ApiResponse;
 import nbc.c1oud_mall.common.response.ApiResponses;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/carts")
@@ -41,6 +43,25 @@ public class CartController {
         return ApiResponses.noContent();
     }
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<CartListResponse>> getCartList() {
+        Long memberId = 1L; // 연동 시 교체
+
+        CartListResponse response = cartService.getCartList(memberId);
+
+        return ApiResponses.ok(response);
+    }
+
+    @GetMapping("/selected")
+    public ResponseEntity<ApiResponse<CartListResponse>> getSelectedCartList(
+            @RequestParam("ids") List<Long> ids) {
+        Long memberId = 1L; // 연동 시 교체
+
+        CartListResponse response = cartService.getSelectedCartList(memberId, ids);
+
+        return ApiResponses.ok(response);
+    }
+
     @DeleteMapping("/items/{cartItemId}")
     public ResponseEntity<ApiResponse<Void>> deleteCartItem(@PathVariable Long cartItemId) {
         Long memberId = 1L; // 연동 시 교체
@@ -52,6 +73,14 @@ public class CartController {
     public ResponseEntity<ApiResponse<Void>> clearCart() {
         Long memberId = 1L; // 연동 시 교체
         cartService.clearCart(memberId);
+        return ApiResponses.noContent();
+    }
+
+    @DeleteMapping("/selected")
+    public ResponseEntity<ApiResponse<Void>> clearCartItems(@RequestParam("ids") List<Long> ids) {
+        Long memberId = 1L; // 연동 시 교체
+        cartService.clearCartItems(memberId, ids);
+
         return ApiResponses.noContent();
     }
 }
