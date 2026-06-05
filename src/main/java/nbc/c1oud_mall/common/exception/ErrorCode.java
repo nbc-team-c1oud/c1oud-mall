@@ -53,6 +53,7 @@ public enum ErrorCode {
     PAYMENT_NOT_FOUND("PM008", "결제를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     PORTONE_CANCEL_FAILED("PM009", "PortOne 결제 취소 호출에 실패했습니다.", HttpStatus.BAD_GATEWAY),
     PAYMENT_ORDER_MISMATCH("PM010", "결제와 주문 정보가 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+    PAYMENT_INVALID_STATUS("PM011", "유효하지 않은 결제 상태 변경입니다.", HttpStatus.BAD_REQUEST),
 
     // ─── 환불 ───
     REFUND_QUANTITY_EXCEEDED("RF001", "잔여 환불 가능 수량을 초과했습니다.", HttpStatus.CONFLICT),

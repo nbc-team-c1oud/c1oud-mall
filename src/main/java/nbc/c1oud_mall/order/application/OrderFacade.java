@@ -11,16 +11,19 @@ import nbc.c1oud_mall.order.application.dto.*;
 import nbc.c1oud_mall.order.domain.Order;
 import nbc.c1oud_mall.order.domain.OrderItem;
 import nbc.c1oud_mall.payment.application.PaymentInitiationService;
+import nbc.c1oud_mall.payment.application.PaymentQueryService;
 import nbc.c1oud_mall.payment.application.dto.PaymentInitiationResult;
+import nbc.c1oud_mall.payment.application.dto.PaymentSummary;
 import nbc.c1oud_mall.payment.application.dto.command.PaymentInitiationCommand;
+import nbc.c1oud_mall.product.application.ProductService;
 import nbc.c1oud_mall.product.domain.Product;
-import nbc.c1oud_mall.product.infrastructure.ProductJpaRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -30,12 +33,14 @@ public class OrderFacade {
     private final UserService userService;
     private final OrderService orderService;
     private final CartService cartService;
-    private final ProductJpaRepository productJpaRepository;
+    private final ProductService productService;
     private final PaymentInitiationService paymentInitiationService;
+    private final PaymentQueryService paymentQueryService;
+    private final OrderCancelService orderCancelService;
 
     public GetOrderPreviewResponse getOrderPreview(Long userId, List<Long> cartItemsIds) {
-
-        List<CartItem> cartItems = getValidateCartItems(
+        // CartService의 검증 메서드 호출
+        List<CartItem> cartItems = cartService.getValidatedCartItemsForOrder(
                 userId, cartItemsIds != null ? cartItemsIds : List.of()
         );
 
@@ -74,7 +79,8 @@ public class OrderFacade {
         User user = userService.findById(userId);
 
         //2. 장바구니 조회 (선택된 아이템만) 임시 엔티티
-        List<CartItem> cartItems = getValidateCartItems(userId, cartItemIds);
+        // CartService의 검증 메서드 호출
+        List<CartItem> cartItems = cartService.getValidatedCartItemsForOrder(userId, cartItemIds);
 
         //3. 데드락 발생 방지를 위해 우선 정렬
         cartItems.sort(Comparator.comparing(cartItem -> cartItem.getProduct().getId()));
@@ -84,9 +90,9 @@ public class OrderFacade {
         List<OrderItem> orderItems = new ArrayList<>();
 
         for (CartItem cartItem : cartItems) {
-            Product product = productJpaRepository.findByIdForUpdate(cartItem.getProduct().getId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
-            product.deductStock(cartItem.getQuantity());
+            Product product = productService.deductStockWithLock(
+                    cartItem.getProduct().getId(),
+                    cartItem.getQuantity());
 
             OrderItem orderItem = new OrderItem(
                     product,
@@ -98,15 +104,15 @@ public class OrderFacade {
         }
         Long totalPrice = orderItems.stream().mapToLong(OrderItem::getSubtotal).sum();
 
-        //4. 포인트 사용 가능 여부 최종 검증
+        //5. 포인트 사용 가능 여부 최종 검증
         validatePointUsage(user, pointUsedAmount, totalPrice);
 
         Long pgAmount = totalPrice - pointUsedAmount;
 
-        //5. 주문 저장
+        //6. 주문 저장
         Order order = orderService.createOrder(user, totalPrice, orderItems);
 
-        //6. 결제 사전등록 (portonePaymentId 채번)
+        //7. 결제 사전등록 (portonePaymentId 채번)
         PaymentInitiationResult initiation = paymentInitiationService.initiate(
                 new PaymentInitiationCommand(
                         order.getId(),
@@ -117,11 +123,11 @@ public class OrderFacade {
                 )
         );
 
-        //7. 주문한 장바구니 아이템만 삭제 (결제에서 진행)
+        //8. 주문한 장바구니 아이템만 삭제 (결제에서 진행)
         //List<Long> orderedItemIds = cartItems.stream().map(CartItem::getId).toList();
         //cartService.clearCartItems(userId, orderedItemIds);
 
-        //8. 응답
+        //9. 응답
         return new OrderCheckoutResponse(
                 order.getId(),
                 initiation.portonePaymentId(),
@@ -133,6 +139,31 @@ public class OrderFacade {
                 pointUsedAmount
         );
     }
+
+    @Transactional
+    public void cancelOrder(Long userId, Long orderId) {
+        Order order = orderService.findOrderEntity(orderId);
+
+        if (!order.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND);
+        }
+
+        if (!orderService.cancelPendingOrder(order.getId())) {
+            return;
+        }
+
+        if (!orderCancelService.cancelPendingPayment(order.getId())) {
+            return;
+        }
+
+        for (OrderItem orderItem : order.getOrderItems()) {
+            productService.restoreStockWithLock(
+                    orderItem.getProduct().getId(),
+                    orderItem.getQuantity()
+            );
+        }
+    }
+
 
     private void validatePointAmountFormat(Long pointUsedAmount) {
         if (pointUsedAmount < 0) {
@@ -152,44 +183,41 @@ public class OrderFacade {
         }
     }
 
-    //임시
     public List<OrderResponse> getOrdersMe(Long userId) {
         List<Order> orders = orderService.findOrderEntities(userId);
+
+        if (orders.isEmpty()) {
+            return List.of();
+        }
+
         List<Long> orderIds = orders.stream().map(Order::getId).toList();
-        //결제 서비스에서 주문 목록에 결제 ID 붙이기 위한 조회 기능 추가하여 연결
-        Long oMockpaymentId = 0L;
+
+        Map<Long, PaymentSummary> paymentSummaryMap = paymentQueryService.getPaymentSummaryMapByOrderIds(orderIds);
 
         return orders.stream()
-                .map(order -> orderService.toResponse(order, oMockpaymentId)).toList();
+                .map(order -> orderService.toResponse(order, getPaymentSummary(paymentSummaryMap, order.getId()))).toList();
     }
 
-    public OrderByOrderIdResponse getOrder(Long userId, Long orderId) {
+    private PaymentSummary getPaymentSummary(Map<Long, PaymentSummary> paymentSummaryMap, Long orderId) {
+        PaymentSummary paymentSummary = paymentSummaryMap.get(orderId);
+
+        if (paymentSummary == null) {
+            throw new BusinessException(ErrorCode.PAYMENT_NOT_FOUND);
+        }
+
+        return paymentSummary;
+    }
+
+    public OrderResponse getOrder(Long userId, Long orderId) {
         Order order = orderService.findOrderEntity(orderId);
         if (!order.getUser().getId().equals(userId)) {
             throw new BusinessException(ErrorCode.ORDER_NOT_FOUND);
         }
 
-        //결제 서비스에서 주문 목록에 결제 ID 붙이기 위한 조회 기능 추가하여 연결
-        Long oMockpaymentId = 0L;
+        PaymentSummary paymentSummary = paymentQueryService.getPaymentSummaryByOrderId(orderId).orElseThrow(
+                () -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        return orderService.toOrderResponse(order, oMockpaymentId);
+        return orderService.toResponse(order, paymentSummary);
     }
 
-    //장바구니 서비스에 넣어야함
-    private List<CartItem> getValidateCartItems(Long userId, List<Long> cartItemsIds) {
-        // cartItemsIds이 비어있으면 "전체 장바구니"
-        List<CartItem> cartItems = cartItemsIds.isEmpty()
-                ? cartService.findCartEntities(userId)
-                : cartService.findCartEntitiesByIds(userId, cartItemsIds);
-
-        if (cartItems.isEmpty()) {
-            throw new BusinessException(ErrorCode.CART_EMPTY);
-        }
-
-        if (!cartItemsIds.isEmpty() && cartItems.size() != cartItemsIds.size()) {
-            throw new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND);
-        }
-
-        return cartItems;
-    }
 }

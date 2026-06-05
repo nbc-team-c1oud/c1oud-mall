@@ -3,7 +3,9 @@ package nbc.c1oud_mall.cart.application;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import nbc.c1oud_mall.cart.application.dto.CartItemAddRequest;
+import nbc.c1oud_mall.cart.application.dto.CartItemResponse;
 import nbc.c1oud_mall.cart.application.dto.CartItemUpdateRequest;
+import nbc.c1oud_mall.cart.application.dto.CartListResponse;
 import nbc.c1oud_mall.cart.domain.CartItem;
 import nbc.c1oud_mall.cart.infrastructure.CartItemJpaRepository;
 import nbc.c1oud_mall.common.exception.BusinessException;
@@ -25,12 +27,12 @@ public class CartService {
     private final ProductJpaRepository productJpaRepository;
 
     @Transactional
-    public void addCartItem(Long memberId, CartItemAddRequest request) {
+    public void addCartItem(Long userId, CartItemAddRequest request) {
         Product product = productJpaRepository.findById(request.getProductId()).orElseThrow(
                 () -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND)
         );
 
-        Optional<CartItem> optionalCartItem = cartItemJpaRepository.findByMemberIdAndProductId(memberId, product.getId());
+        Optional<CartItem> optionalCartItem = cartItemJpaRepository.findByUserIdAndProductId(userId, product.getId());
 
         if (optionalCartItem.isPresent()) {
             CartItem existingItem = optionalCartItem.get();
@@ -40,7 +42,7 @@ public class CartService {
                 throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK);
             }
             CartItem newItem = CartItem.builder()
-                    .memberId(memberId)
+                    .userId(userId)
                     .product(product)
                     .quantity(request.getQuantity())
                     .build();
@@ -49,40 +51,75 @@ public class CartService {
     }
 
     @Transactional
-    public void updateCartItemQuantity(Long memberId, Long cartItemId, CartItemUpdateRequest request) {
+    public void updateCartItemQuantity(Long userId, Long cartItemId, CartItemUpdateRequest request) {
         CartItem cartItem = cartItemJpaRepository.findById(cartItemId).orElseThrow(
                 () -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND)
         );
 
-        cartItem.validateOwner(memberId);
+        cartItem.validateOwner(userId);
 
         cartItem.updateQuantity(request.getQuantity());
     }
 
-    public List<CartItem> findCartEntities(Long userId) {
-        return cartItemJpaRepository.findByUserId(userId);
+    @Transactional(readOnly = true)
+    public CartListResponse getCartList(Long userId) {
+        List<CartItem> cartItems = cartItemJpaRepository.findByUserId(userId);
+
+        List<CartItemResponse> itemResponses = cartItems.stream()
+                .map(CartItemResponse::new)
+                .toList();
+
+        return new CartListResponse(itemResponses);
     }
 
-    public List<CartItem> findCartEntitiesByIds(Long userId, List<Long> ids) {
-        return cartItemJpaRepository.findByUserIdAndCartId(userId, ids);
+    @Transactional(readOnly = true)
+    public CartListResponse getSelectedCartList(Long userId, List<Long> ids) {
+        List<CartItem> cartItems = cartItemJpaRepository.findByUserIdAndCartId(userId, ids);
+
+        List<CartItemResponse> itemResponses = cartItems.stream()
+                .map(CartItemResponse::new)
+                .toList();
+
+        return new CartListResponse(itemResponses);
+    }
+    // 내부 서비스 호출 전용
+    @Transactional(readOnly = true)
+    public List<CartItem> getValidatedCartItemsForOrder(Long userId, List<Long> cartItemIds) {
+        // cartItemIds가 비어있으면 전체조회, 있으면 선택조회
+        List<CartItem> cartItems = (cartItemIds == null || cartItemIds.isEmpty())
+                ? cartItemJpaRepository.findByUserId(userId)
+                : cartItemJpaRepository.findByUserIdAndCartId(userId, cartItemIds);
+
+        // 장바구니가 비어있는지 검증
+        if (cartItems.isEmpty()) {
+            throw new BusinessException(ErrorCode.CART_EMPTY);
+        }
+
+        // 요청한 개수와 실제 DB에서 조회된 개수가 다르면 예외(변경,조작 검증)
+        if (cartItemIds != null && !cartItemIds.isEmpty() && cartItems.size() != cartItemIds.size()) {
+            throw new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND);
+        }
+
+        return cartItems;
     }
 
     @Transactional
-    public void deleteCartItem(Long memberId, Long cartItemId) {
+    public void deleteCartItem(Long userId, Long cartItemId) {
         CartItem cartItem = cartItemJpaRepository.findById(cartItemId).orElseThrow(
                 () -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND)
         );
 
-        cartItem.validateOwner(memberId);
+        cartItem.validateOwner(userId);
 
         cartItemJpaRepository.delete(cartItem);
     }
 
     @Transactional
-    public void clearCart(Long memberId) {
-        cartItemJpaRepository.deleteAllByMemberId(memberId);
+    public void clearCart(Long userId) {
+        cartItemJpaRepository.deleteAllByUserId(userId);
     }
 
+    @Transactional
     public void clearCartItems(Long userId, List<Long> orderedItemIds) {
         int deleted = cartItemJpaRepository.deleteAllByUserIdAndCartId(userId, orderedItemIds);
         if (deleted != orderedItemIds.size()) {

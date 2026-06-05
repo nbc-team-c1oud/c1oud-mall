@@ -2,6 +2,7 @@ package nbc.c1oud_mall.payment.application;
 
 import nbc.c1oud_mall.common.exception.BusinessException;
 import nbc.c1oud_mall.common.exception.ErrorCode;
+import nbc.c1oud_mall.order.application.OrderService;
 import nbc.c1oud_mall.payment.application.dto.PaymentConfirmationResult;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
@@ -11,7 +12,6 @@ import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockCartService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockInventoryService;
-import nbc.c1oud_mall.order.application.OrderService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockPointService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

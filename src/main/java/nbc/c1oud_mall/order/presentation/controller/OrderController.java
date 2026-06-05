@@ -1,6 +1,5 @@
 package nbc.c1oud_mall.order.presentation.controller;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import nbc.c1oud_mall.common.response.ApiResponse;
 import nbc.c1oud_mall.order.application.OrderFacade;
@@ -32,7 +31,7 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<ApiResponse<OrderCheckoutResponse>> createOrder(
             @AuthenticationPrincipal Long userId,
-            @RequestBody(required = false)OrderCheckoutRequest request) {
+            @RequestBody(required = false) OrderCheckoutRequest request) {
         OrderCheckoutResponse response = orderFacade.createOrder(userId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
 
@@ -46,11 +45,15 @@ public class OrderController {
     }
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<OrderByOrderIdResponse>> getOrderById(@AuthenticationPrincipal Long userId, @PathVariable Long orderId) {
-        OrderByOrderIdResponse response = orderFacade.getOrder(userId, orderId);
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(@AuthenticationPrincipal Long userId, @PathVariable Long orderId) {
+        OrderResponse response = orderFacade.getOrder(userId, orderId);
         return ResponseEntity.ok(ApiResponse.success(response));
 
     }
 
-
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancelOrder(@AuthenticationPrincipal Long userId, @PathVariable Long orderId) {
+        orderFacade.cancelOrder(userId, orderId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

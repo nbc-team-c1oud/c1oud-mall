@@ -20,7 +20,7 @@ public class CartItem {
     private Long id;
 
     @Column(nullable = false)
-    private Long memberId;
+    private Long userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
@@ -30,8 +30,8 @@ public class CartItem {
     private int quantity;
 
     @Builder
-    public CartItem(Long memberId, Product product, int quantity) {
-        this.memberId = memberId;
+    public CartItem(Long userId, Product product, int quantity) {
+        this.userId = userId;
         this.product = product;
         this.quantity = quantity;
     }
@@ -56,8 +56,8 @@ public class CartItem {
     }
 
     // 소유자 확인
-    public void validateOwner(Long requestMemberId) {
-        if (!this.memberId.equals(requestMemberId)) {
+    public void validateOwner(Long requestUserId) {
+        if (!this.userId.equals(requestUserId)) {
             throw new BusinessException(ErrorCode.CART_ACCESS_DENIED);
         }
     }
