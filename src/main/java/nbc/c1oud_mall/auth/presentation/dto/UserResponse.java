@@ -13,7 +13,7 @@ public class UserResponse {
 	private String name;
 	private String phoneNumber;
 	private String role;
-	private int pointBalance;
+	private Long pointBalance;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 }
