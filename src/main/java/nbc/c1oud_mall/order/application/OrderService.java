@@ -41,6 +41,7 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
     }
 
+    // Order -> OrderResponse
     public OrderResponse toResponse(Order order, PaymentSummary paymentSummary) {
         List<OrderItemResponse> items = order.getOrderItems().stream()
                 .map(OrderItemResponse::from).toList();
@@ -71,8 +72,7 @@ public class OrderService {
      */
     @Transactional   // readOnly=true 클래스 어노테이션을 메서드에서 오버라이드
     public void completeOrder(Long orderId) {
-        Order order = orderJpaRepository.findById(orderId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+        Order order = findOrderById(orderId);
 
         if (order.getOrderStatus() == OrderStatus.CONFIRMED) {
             return;   // 이미 확정 — silent OK (idempotency 규칙 §5)
@@ -87,12 +87,32 @@ public class OrderService {
      */
     @Transactional
     public void cancelOrder(Long orderId) {
-        Order order = orderJpaRepository.findById(orderId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+        Order order = findOrderById(orderId);
 
         if (order.getOrderStatus() == OrderStatus.CANCELLED) {
             return;   // 이미 취소 — silent OK
         }
         order.markAsCancelled();
+    }
+
+    @Transactional
+    public boolean cancelPendingOrder(Long orderId) {
+        Order order = findOrderById(orderId);
+
+        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+            return false;   // 이미 취소 — silent OK
+        }
+
+        if (order.getOrderStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new BusinessException(ErrorCode.INVALID_ORDER_STATUS);
+        }
+
+        order.markAsCancelled();
+        return true;
+    }
+
+    private Order findOrderById(Long orderId) {
+        return orderJpaRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
     }
 }

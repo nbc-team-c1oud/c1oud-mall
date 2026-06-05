@@ -36,6 +36,7 @@ public class OrderFacade {
     private final ProductService productService;
     private final PaymentInitiationService paymentInitiationService;
     private final PaymentQueryService paymentQueryService;
+    private final OrderCancelService orderCancelService;
 
     public GetOrderPreviewResponse getOrderPreview(Long userId, List<Long> cartItemsIds) {
         // CartService의 검증 메서드 호출
@@ -138,6 +139,31 @@ public class OrderFacade {
                 pointUsedAmount
         );
     }
+
+    @Transactional
+    public void cancelOrder(Long userId, Long orderId) {
+        Order order = orderService.findOrderEntity(orderId);
+
+        if (!order.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND);
+        }
+
+        if (!orderService.cancelPendingOrder(order.getId())) {
+            return;
+        }
+
+        if (!orderCancelService.cancelPendingPayment(order.getId())) {
+            return;
+        }
+
+        for (OrderItem orderItem : order.getOrderItems()) {
+            productService.restoreStockWithLock(
+                    orderItem.getProduct().getId(),
+                    orderItem.getQuantity()
+            );
+        }
+    }
+
 
     private void validatePointAmountFormat(Long pointUsedAmount) {
         if (pointUsedAmount < 0) {
