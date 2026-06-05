@@ -75,4 +75,12 @@ public class CartController {
         cartService.clearCart(memberId);
         return ApiResponses.noContent();
     }
+
+    @DeleteMapping("/selected")
+    public ResponseEntity<ApiResponse<Void>> clearCartItems(@RequestParam("ids") List<Long> ids) {
+        Long memberId = 1L; // 연동 시 교체
+        cartService.clearCartItems(memberId, ids);
+
+        return ApiResponses.noContent();
+    }
 }

@@ -82,6 +82,26 @@ public class CartService {
 
         return new CartListResponse(itemResponses);
     }
+    // 내부 서비스 호출 전용
+    @Transactional(readOnly = true)
+    public List<CartItem> getValidatedCartItemsForOrder(Long userId, List<Long> cartItemIds) {
+        // cartItemIds가 비어있으면 전체조회, 있으면 선택조회
+        List<CartItem> cartItems = (cartItemIds == null || cartItemIds.isEmpty())
+                ? cartItemJpaRepository.findByUserId(userId)
+                : cartItemJpaRepository.findByUserIdAndCartId(userId, cartItemIds);
+
+        // 장바구니가 비어있는지 검증
+        if (cartItems.isEmpty()) {
+            throw new BusinessException(ErrorCode.CART_EMPTY);
+        }
+
+        // 요청한 개수와 실제 DB에서 조회된 개수가 다르면 예외(변경,조작 검증)
+        if (cartItemIds != null && !cartItemIds.isEmpty() && cartItems.size() != cartItemIds.size()) {
+            throw new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND);
+        }
+
+        return cartItems;
+    }
 
     @Transactional
     public void deleteCartItem(Long memberId, Long cartItemId) {
@@ -99,6 +119,7 @@ public class CartService {
         cartItemJpaRepository.deleteAllByMemberId(memberId);
     }
 
+    @Transactional
     public void clearCartItems(Long userId, List<Long> orderedItemIds) {
         int deleted = cartItemJpaRepository.deleteAllByUserIdAndCartId(userId, orderedItemIds);
         if (deleted != orderedItemIds.size()) {
