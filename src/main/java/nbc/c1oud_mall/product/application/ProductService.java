@@ -44,4 +44,12 @@ public class ProductService {
 
         return product;
     }
+
+    @Transactional
+    public void restoreStockWithLock(Long productId, Integer quantity) {
+        Product product = productJpaRepository.findByIdForUpdate(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND));
+
+        product.restoreStock(quantity);
+    }
 }
