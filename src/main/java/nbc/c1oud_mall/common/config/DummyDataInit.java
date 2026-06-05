@@ -51,6 +51,14 @@ public class DummyDataInit {
                             .category("수산물")
                             .status(ProductStatus.SALE)
                             .description("해풍에 말려 더욱 쫄깃하고 맛있는 구룡포 반건조 오징어입니다.")
+                            .build(),
+                    Product.builder()
+                            .name("[테스트] 1원 결제 검증용 상품")
+                            .price(1L)
+                            .stockQuantity(9999)
+                            .category("테스트")
+                            .status(ProductStatus.SALE)
+                            .description("PortOne 결제 e2e 테스트용. 운영 배포 전 제거 필요.")
                             .build()
             );
 
