@@ -1,5 +1,5 @@
 # 빌드 단계
-FROM gradle:8.5-jdk21 AS build
+FROM gradle:8.14-jdk21 AS build
 WORKDIR /app
 COPY . .
 RUN gradle build -x test --no-daemon
