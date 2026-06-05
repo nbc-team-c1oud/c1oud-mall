@@ -16,6 +16,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import nbc.c1oud_mall.auth.domain.UserRole;
 import nbc.c1oud_mall.common.domain.BaseEntity;
+import nbc.c1oud_mall.common.exception.BusinessException;
+import nbc.c1oud_mall.common.exception.ErrorCode;
 
 @Getter
 @Entity
@@ -54,6 +56,25 @@ public class User extends BaseEntity {
 		this.phoneNumber = phoneNumber;
 		this.role = UserRole.USER;
 		this.pointBalance = 0L;
+	}
+
+	public void usePoints(long amount) {
+		if (amount <= 0L) {
+			throw new BusinessException(ErrorCode.POINT_AMOUNT_INVALID);
+		}
+		if (this.pointBalance < amount) {
+			throw BusinessException.withDetail(
+					ErrorCode.POINT_INSUFFICIENT,
+					"userId=" + id + ", balance=" + pointBalance + ", requested=" + amount);
+		}
+		this.pointBalance -= amount;
+	}
+
+	public void earnPoints(long amount) {
+		if (amount <= 0L) {
+			throw new BusinessException(ErrorCode.POINT_AMOUNT_INVALID);
+		}
+		this.pointBalance += amount;
 	}
 
 }
