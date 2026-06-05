@@ -43,7 +43,7 @@ public class User extends BaseEntity {
 	private UserRole role;
 
 	@Column(nullable = false)
-	private int pointBalance;
+	private Long pointBalance;
 
 	private LocalDateTime deletedAt;
 
@@ -53,7 +53,7 @@ public class User extends BaseEntity {
 		this.name = name;
 		this.phoneNumber = phoneNumber;
 		this.role = UserRole.USER;
-		this.pointBalance = 0;
+		this.pointBalance = 0L;
 	}
 
 }
