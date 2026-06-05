@@ -51,5 +51,9 @@ public class OrderController {
 
     }
 
-
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancelOrder(@AuthenticationPrincipal Long userId, @PathVariable Long orderId) {
+        orderFacade.cancelOrder(userId, orderId);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }
