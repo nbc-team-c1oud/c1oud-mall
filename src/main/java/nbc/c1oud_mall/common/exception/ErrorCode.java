@@ -52,7 +52,12 @@ public enum ErrorCode {
     PORTONE_PAYMENT_NOT_PAID("PM007", "PortOne 결제 상태가 PAID가 아닙니다.", HttpStatus.BAD_REQUEST),
     PAYMENT_NOT_FOUND("PM008", "결제를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     PORTONE_CANCEL_FAILED("PM009", "PortOne 결제 취소 호출에 실패했습니다.", HttpStatus.BAD_GATEWAY),
-    PAYMENT_ORDER_MISMATCH("PM010", "결제와 주문 정보가 일치하지 않습니다.", HttpStatus.BAD_REQUEST);
+    PAYMENT_ORDER_MISMATCH("PM010", "결제와 주문 정보가 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+
+    // ─── 환불 ───
+    REFUND_QUANTITY_EXCEEDED("RF001", "잔여 환불 가능 수량을 초과했습니다.", HttpStatus.CONFLICT),
+    REFUND_NOT_REFUNDABLE_STATE("RF002", "환불할 수 없는 결제 상태입니다.", HttpStatus.CONFLICT),
+    REFUND_OWNERSHIP_FAILED("RF003", "본인 소유의 결제만 환불할 수 있습니다.", HttpStatus.FORBIDDEN);
 
     private final String code;
     private final String message;
