@@ -7,12 +7,12 @@ import nbc.c1oud_mall.payment.application.dto.PaymentConfirmationResult;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
 import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand;
+import nbc.c1oud_mall.cart.application.CartService;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
-import nbc.c1oud_mall.payment.infrastructure.mock.MockCartService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockInventoryService;
-import nbc.c1oud_mall.payment.infrastructure.mock.MockPointService;
+import nbc.c1oud_mall.point.application.PointService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,9 +50,9 @@ class PaymentConfirmationServiceTest {
     @Mock
     private OrderService orderService;
     @Mock
-    private MockPointService mockPointService;
+    private PointService pointService;
     @Mock
-    private MockCartService mockCartService;
+    private CartService cartService;
     @Mock
     private MockInventoryService mockInventoryService;
 
@@ -87,9 +87,9 @@ class PaymentConfirmationServiceTest {
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
 
         verify(orderService).completeOrder(ORDER_ID);
-        verify(mockPointService).deductPoints(USER_ID, 1_000L);
-        verify(mockPointService, never()).accruePoints(any(), anyLong());
-        verify(mockCartService).clearByUserId(USER_ID);
+        verify(pointService).deductPoints(eq(USER_ID), eq(1_000L), eq(payment));
+        verify(pointService, never()).accruePoints(any(), anyLong(), any());
+        verify(cartService).clearCart(USER_ID);
         verify(mockInventoryService).confirmByOrderId(ORDER_ID);
         verifyNoInteractions(paymentCompensationService);
     }
@@ -207,7 +207,7 @@ class PaymentConfirmationServiceTest {
 
         service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
 
-        verify(mockPointService, never()).deductPoints(any(), anyLong());
+        verify(pointService, never()).deductPoints(any(), anyLong(), any());
         verify(orderService).completeOrder(ORDER_ID);
     }
 }
