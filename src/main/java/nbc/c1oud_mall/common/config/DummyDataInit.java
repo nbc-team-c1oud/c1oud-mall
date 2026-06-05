@@ -59,6 +59,14 @@ public class DummyDataInit {
                             .category("테스트")
                             .status(ProductStatus.SALE)
                             .description("PortOne 결제 e2e 테스트용. 운영 배포 전 제거 필요.")
+                            .build(),
+                    Product.builder()
+                            .name("[테스트] 1000원 결제 검증용 상품")
+                            .price(1000L)
+                            .stockQuantity(9999)
+                            .category("테스트")
+                            .status(ProductStatus.SALE)
+                            .description("KG이니시스 최소 결제 금액(1000원) e2e 테스트용. 운영 배포 전 제거 필요.")
                             .build()
             );
 
