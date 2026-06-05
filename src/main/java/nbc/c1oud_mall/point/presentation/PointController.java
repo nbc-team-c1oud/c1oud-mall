@@ -21,7 +21,7 @@ public class PointController {
 
     private final PointService pointService;
 
-    @GetMapping
+    @GetMapping("/balance")
     public ResponseEntity<ApiResponse<PointBalanceResponse>> getPointBalance(
             @AuthenticationPrincipal Long userId
     ) {
@@ -29,7 +29,7 @@ public class PointController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @GetMapping
+    @GetMapping("/histoties")
     public ResponseEntity<ApiResponse<List<PointHistoryResponse>>> getPointHistories(
             @AuthenticationPrincipal Long userId
     ) {
