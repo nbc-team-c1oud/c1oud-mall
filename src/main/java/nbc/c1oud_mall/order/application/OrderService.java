@@ -4,13 +4,13 @@ import lombok.RequiredArgsConstructor;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.common.exception.BusinessException;
 import nbc.c1oud_mall.common.exception.ErrorCode;
-import nbc.c1oud_mall.order.application.dto.OrderByOrderIdResponse;
 import nbc.c1oud_mall.order.application.dto.OrderItemResponse;
 import nbc.c1oud_mall.order.application.dto.OrderResponse;
 import nbc.c1oud_mall.order.domain.Order;
 import nbc.c1oud_mall.order.domain.OrderItem;
 import nbc.c1oud_mall.order.domain.OrderStatus;
 import nbc.c1oud_mall.order.infrastructure.OrderJpaRepository;
+import nbc.c1oud_mall.payment.application.dto.PaymentSummary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,41 +41,20 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
     }
 
-    // Order -> OrderResponse 변환
-    public OrderResponse toResponse(Order order, Long paymentId) {
+    public OrderResponse toResponse(Order order, PaymentSummary paymentSummary) {
         List<OrderItemResponse> items = order.getOrderItems().stream()
-                .map(oi -> new OrderItemResponse(
-                        oi.getProductNameSnapshot(),
-                        oi.getPriceSnapshot(),
-                        oi.getQuantity()
-                )).toList();
+                .map(OrderItemResponse::from).toList();
 
         return new OrderResponse(
                 order.getId(),
-                paymentId,
+                paymentSummary.paymentId(),
+                paymentSummary.paymentStatus(),
                 order.getOrderNumber(),
                 order.getOrderStatus().name(),
                 order.getTotalAmount(),
-                order.getCreatedAt(),
-                items
-        );
-    }
-
-    //포인트 관련 추가 예정
-    public OrderByOrderIdResponse toOrderResponse(Order order, Long paymentId) {
-        List<OrderItemResponse> items = order.getOrderItems().stream()
-                .map(oi -> new OrderItemResponse(
-                        oi.getProductNameSnapshot(),
-                        oi.getPriceSnapshot(),
-                        oi.getQuantity()
-                )).toList();
-
-        return new OrderByOrderIdResponse(
-                order.getId(),
-                paymentId,
-                order.getOrderNumber(),
-                order.getOrderStatus().name(),
-                order.getTotalAmount(),
+                paymentSummary.pgAmount(),
+                paymentSummary.pointUsedAmount(),
+                paymentSummary.pointEarnedAmount(),
                 order.getCreatedAt(),
                 items
         );

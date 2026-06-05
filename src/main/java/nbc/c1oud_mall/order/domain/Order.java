@@ -46,11 +46,6 @@ public class Order extends BaseEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    @CreatedDate
-    @Column(name = "ordered_at", nullable = false, updatable = false)
-    private LocalDateTime orderAt;
-
-    //USERID 임시
     @Builder
     public Order(User user, Long totalAmount, List<OrderItem> orderItems) {
         this.user = user;

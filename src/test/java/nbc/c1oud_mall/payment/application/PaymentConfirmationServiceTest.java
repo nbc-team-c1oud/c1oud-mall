@@ -2,6 +2,7 @@ package nbc.c1oud_mall.payment.application;
 
 import nbc.c1oud_mall.common.exception.BusinessException;
 import nbc.c1oud_mall.common.exception.ErrorCode;
+import nbc.c1oud_mall.order.application.OrderService;
 import nbc.c1oud_mall.payment.application.dto.PaymentConfirmationResult;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
@@ -11,7 +12,6 @@ import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockCartService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockInventoryService;
-import nbc.c1oud_mall.payment.infrastructure.mock.MockOrderService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockPointService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ class PaymentConfirmationServiceTest {
     @Mock
     private PaymentCompensationService paymentCompensationService;
     @Mock
-    private MockOrderService mockOrderService;
+    private OrderService orderService;
     @Mock
     private MockPointService mockPointService;
     @Mock
@@ -86,7 +86,7 @@ class PaymentConfirmationServiceTest {
         assertThat(result.status()).isEqualTo(PaymentStatus.COMPLETED);
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
 
-        verify(mockOrderService).completeOrder(ORDER_ID);
+        verify(orderService).completeOrder(ORDER_ID);
         verify(mockPointService).deductPoints(USER_ID, 1_000L);
         verify(mockPointService, never()).accruePoints(any(), anyLong());
         verify(mockCartService).clearByUserId(USER_ID);
@@ -108,7 +108,7 @@ class PaymentConfirmationServiceTest {
                 service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
 
         assertThat(result.alreadyCompleted()).isTrue();
-        verifyNoInteractions(mockOrderService);
+        verifyNoInteractions(orderService);
         verifyNoInteractions(paymentCompensationService);
     }
 
@@ -127,7 +127,7 @@ class PaymentConfirmationServiceTest {
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
         verifyNoInteractions(paymentCompensationService);
-        verifyNoInteractions(mockOrderService);
+        verifyNoInteractions(orderService);
     }
 
     @Test
@@ -145,7 +145,7 @@ class PaymentConfirmationServiceTest {
 
         assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
         verifyNoInteractions(paymentCompensationService);
-        verifyNoInteractions(mockOrderService);
+        verifyNoInteractions(orderService);
     }
 
     @Test
@@ -164,7 +164,7 @@ class PaymentConfirmationServiceTest {
                 .isEqualTo(ErrorCode.PORTONE_PAYMENT_NOT_PAID);
 
         verify(paymentCompensationService).compensate(eq(PORTONE_ID), anyString());
-        verifyNoInteractions(mockOrderService);
+        verifyNoInteractions(orderService);
     }
 
     @Test
@@ -208,6 +208,6 @@ class PaymentConfirmationServiceTest {
         service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
 
         verify(mockPointService, never()).deductPoints(any(), anyLong());
-        verify(mockOrderService).completeOrder(ORDER_ID);
+        verify(orderService).completeOrder(ORDER_ID);
     }
 }
