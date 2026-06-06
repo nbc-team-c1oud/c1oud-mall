@@ -110,6 +110,7 @@ class PaymentConfirmationServiceIntegrationTest {
         assertThat(fromDb.getPgTxId()).isNull();
         assertThat(fromDb.getConfirmedAt()).isNull();
 
-        verify(portOnePaymentCancelPort).cancel(Mockito.eq(portoneId), Mockito.anyString());
+        verify(portOnePaymentCancelPort).cancel(
+                Mockito.eq(portoneId), Mockito.isNull(), Mockito.anyString(), Mockito.isNull());
     }
 }

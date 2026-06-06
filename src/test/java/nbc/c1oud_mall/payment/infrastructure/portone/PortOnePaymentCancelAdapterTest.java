@@ -4,6 +4,7 @@ import nbc.c1oud_mall.common.exception.BusinessException;
 import nbc.c1oud_mall.common.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -42,55 +43,111 @@ class PortOnePaymentCancelAdapterTest {
         this.adapter = new PortOnePaymentCancelAdapter(builder, properties);
     }
 
-    @Test
-    @DisplayName("200 + 정상 응답 → 예외 없이 종료, reason이 body에 포함")
-    void success_no_exception() {
-        server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "PortOne " + SECRET))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.reason").value(REASON))
-                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+    @Nested
+    @DisplayName("body 직렬화")
+    class BodySerialization {
 
-        assertThatCode(() -> adapter.cancel(PAYMENT_ID, REASON)).doesNotThrowAnyException();
-        server.verify();
+        @Test
+        @DisplayName("전체취소 (amount=null, requestKey=null) → body에 reason만 포함, amount/requestKey 키 제외")
+        void full_cancel_omits_nullable_keys() {
+            server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
+                    .andExpect(method(HttpMethod.POST))
+                    .andExpect(header("Authorization", "PortOne " + SECRET))
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.reason").value(REASON))
+                    .andExpect(jsonPath("$.amount").doesNotExist())
+                    .andExpect(jsonPath("$.requestKey").doesNotExist())
+                    .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+            assertThatCode(() -> adapter.cancel(PAYMENT_ID, null, REASON, null))
+                    .doesNotThrowAnyException();
+            server.verify();
+        }
+
+        @Test
+        @DisplayName("부분취소 + 멱등키 모두 포함 → body에 reason/amount/requestKey 모두 포함")
+        void partial_cancel_with_idempotency_includes_all_keys() {
+            server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
+                    .andExpect(method(HttpMethod.POST))
+                    .andExpect(jsonPath("$.reason").value(REASON))
+                    .andExpect(jsonPath("$.amount").value(500))
+                    .andExpect(jsonPath("$.requestKey").value("refund-42"))
+                    .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+            assertThatCode(() -> adapter.cancel(PAYMENT_ID, 500L, REASON, "refund-42"))
+                    .doesNotThrowAnyException();
+            server.verify();
+        }
+
+        @Test
+        @DisplayName("멱등키만 전달 (amount=null) → body에 reason/requestKey 포함, amount 키 제외")
+        void idempotency_key_only_omits_amount() {
+            server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
+                    .andExpect(jsonPath("$.reason").value(REASON))
+                    .andExpect(jsonPath("$.amount").doesNotExist())
+                    .andExpect(jsonPath("$.requestKey").value("compensate-x"))
+                    .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+            assertThatCode(() -> adapter.cancel(PAYMENT_ID, null, REASON, "compensate-x"))
+                    .doesNotThrowAnyException();
+            server.verify();
+        }
+
+        @Test
+        @DisplayName("amount만 전달 (requestKey=null) → body에 reason/amount 포함, requestKey 키 제외")
+        void amount_only_omits_request_key() {
+            server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
+                    .andExpect(jsonPath("$.reason").value(REASON))
+                    .andExpect(jsonPath("$.amount").value(1000))
+                    .andExpect(jsonPath("$.requestKey").doesNotExist())
+                    .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+            assertThatCode(() -> adapter.cancel(PAYMENT_ID, 1000L, REASON, null))
+                    .doesNotThrowAnyException();
+            server.verify();
+        }
     }
 
-    @Test
-    @DisplayName("404 → BusinessException(PM009)")
-    void not_found_throws_pm009() {
-        server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
-                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+    @Nested
+    @DisplayName("외부 응답 분기 (기존)")
+    class ExternalResponses {
 
-        assertThatThrownBy(() -> adapter.cancel(PAYMENT_ID, REASON))
-                .isInstanceOf(BusinessException.class)
-                .extracting(e -> ((BusinessException) e).getErrorCode())
-                .isEqualTo(ErrorCode.PORTONE_CANCEL_FAILED);
-    }
+        @Test
+        @DisplayName("404 → BusinessException(PM009)")
+        void not_found_throws_pm009() {
+            server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
+                    .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-    @Test
-    @DisplayName("500 → BusinessException(PM009)")
-    void server_error_throws_pm009() {
-        server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
-                .andRespond(withServerError());
+            assertThatThrownBy(() -> adapter.cancel(PAYMENT_ID, null, REASON, null))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PORTONE_CANCEL_FAILED);
+        }
 
-        assertThatThrownBy(() -> adapter.cancel(PAYMENT_ID, REASON))
-                .isInstanceOf(BusinessException.class)
-                .extracting(e -> ((BusinessException) e).getErrorCode())
-                .isEqualTo(ErrorCode.PORTONE_CANCEL_FAILED);
-    }
+        @Test
+        @DisplayName("500 → BusinessException(PM009)")
+        void server_error_throws_pm009() {
+            server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
+                    .andRespond(withServerError());
 
-    @Test
-    @DisplayName("IO 오류(타임아웃 시뮬레이션) → BusinessException(PM009)")
-    void io_error_throws_pm009() {
-        server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
-                .andRespond(request -> {
-                    throw new IOException("simulated socket timeout");
-                });
+            assertThatThrownBy(() -> adapter.cancel(PAYMENT_ID, null, REASON, null))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PORTONE_CANCEL_FAILED);
+        }
 
-        assertThatThrownBy(() -> adapter.cancel(PAYMENT_ID, REASON))
-                .isInstanceOf(BusinessException.class)
-                .extracting(e -> ((BusinessException) e).getErrorCode())
-                .isEqualTo(ErrorCode.PORTONE_CANCEL_FAILED);
+        @Test
+        @DisplayName("IO 오류(타임아웃 시뮬레이션) → BusinessException(PM009)")
+        void io_error_throws_pm009() {
+            server.expect(requestTo(BASE_URL + "/payments/" + PAYMENT_ID + "/cancel"))
+                    .andRespond(request -> {
+                        throw new IOException("simulated socket timeout");
+                    });
+
+            assertThatThrownBy(() -> adapter.cancel(PAYMENT_ID, null, REASON, null))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.PORTONE_CANCEL_FAILED);
+        }
     }
 }
