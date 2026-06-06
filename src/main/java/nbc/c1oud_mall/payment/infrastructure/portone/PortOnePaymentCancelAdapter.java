@@ -23,13 +23,13 @@ public class PortOnePaymentCancelAdapter implements PortOnePaymentCancelPort {
     }
 
     @Override
-    public void cancel(String portonePaymentId, String reason) {
+    public void cancel(String portonePaymentId, Long amount, String reason, String requestKey) {
         try {
             restClient.post()
                     .uri("/payments/{paymentId}/cancel", portonePaymentId)
                     .header("Authorization", "PortOne " + properties.secret())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(new PortOneCancelRequest(reason))
+                    .body(new PortOneCancelRequest(reason, amount, requestKey))
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
                         throw BusinessException.withDetail(
