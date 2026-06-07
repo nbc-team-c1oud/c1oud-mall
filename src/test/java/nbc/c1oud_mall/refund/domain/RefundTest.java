@@ -18,11 +18,11 @@ class RefundTest {
     private static final String REASON = "단순 변심";
 
     private RefundablePayment completedPayment() {
-        return new RefundablePayment(PAYMENT_ID, USER_ID, true, 10_000L, 9_000L, 1_000L);
+        return new RefundablePayment(PAYMENT_ID, USER_ID, true, 10_000L, 9_000L, 1_000L, "portone-test-001");
     }
 
     private RefundablePayment pendingPayment() {
-        return new RefundablePayment(PAYMENT_ID, USER_ID, false, 10_000L, 9_000L, 1_000L);
+        return new RefundablePayment(PAYMENT_ID, USER_ID, false, 10_000L, 9_000L, 1_000L, "portone-test-002");
     }
 
     private RefundBreakdown zeroBreakdown() {
