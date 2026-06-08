@@ -29,6 +29,12 @@ logging:
     org.hibernate.orm.jdbc.bind: TRACE
 
 # ─── super-admin ───
+# 운영은 환경변수로 오버라이드. 로컬·테스트는 placeholder 기본값으로 빈 컨텍스트 부팅 가능.
 super-admin:
-  email: ${SUPER_ADMIN_EMAIL}
-  password: ${SUPER_ADMIN_PASSWORD}
+  email: ${SUPER_ADMIN_EMAIL:super-admin-dev@example.com}
+  password: ${SUPER_ADMIN_PASSWORD:dev-super-admin-password}
+
+# ─── JWT (dev 기본값) ───
+# application.yml의 ${JWT_SECRET}이 dev 프로파일에선 본 값으로 해소.
+jwt:
+  secret: ${JWT_SECRET:dev-jwt-secret-for-local-and-test-environment-only}

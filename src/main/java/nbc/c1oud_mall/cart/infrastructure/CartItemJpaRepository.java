@@ -16,8 +16,8 @@ public interface CartItemJpaRepository extends JpaRepository<CartItem, Long> {
 
     //전체 비우기용
     @Modifying(clearAutomatically = true)
-    @Query("DELETE FROM CartItem c WHERE c.userId = :memberId")
-    void deleteAllByUserId(@Param("userId") Long memberId);
+    @Query("DELETE FROM CartItem c WHERE c.userId = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 
     //멤버 아이디가 장바구니 멤버 아이디와 일치하면 장바구니 상품 전체 불러오기
     //임시, 멤버 아이디를 연결해서 받아오는게 아님...
