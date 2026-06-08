@@ -24,9 +24,9 @@ public enum ErrorCode {
     EMAIL_DUPLICATE("U001", "이미 사용 중인 이메일입니다.", HttpStatus.CONFLICT),
     INVALID_CREDENTIALS("U002", "이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED),
     USER_NOT_FOUND("U003", "존재하지 않는 사용자입니다.", HttpStatus.NOT_FOUND),
-    MISSING_TOKEN("U004", "인증 토큰이 없습니다.", HttpStatus.UNAUTHORIZED),
     INVALID_TOKEN("U005", "유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED),
     TOKEN_EXPIRED("U006", "만료된 토큰입니다.", HttpStatus.UNAUTHORIZED),
+    ALREADY_ADMIN("U007", "이미 관리자 권한을 가진 사용자입니다.", HttpStatus.CONFLICT),
 
     // ─── 장바구니 ───
     CART_ITEM_NOT_FOUND("CRT001", "장바구니 상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
