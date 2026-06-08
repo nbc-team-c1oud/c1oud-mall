@@ -15,7 +15,11 @@ public interface CartItemJpaRepository extends JpaRepository<CartItem, Long> {
     Optional<CartItem> findByUserIdAndProductId(Long memberId, Long productId);
 
     //전체 비우기용
-    @Modifying(clearAutomatically = true)
+    // flushAutomatically=true 필수: 같은 TX 내 dirty 엔티티(Payment.markCompleted,
+    // Order.markAsConfirmed, User.earnPoints 등)를 bulk DELETE 직전에 DB로 flush해야 한다.
+    // 없으면 이어지는 clearAutomatically로 PC가 비워지며 변경분이 폐기됨 → confirm 200
+    // 응답인데 DB는 PENDING/PENDING_PAYMENT, User.pointBalance 미반영 사일런트 버그.
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM CartItem c WHERE c.userId = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
 
