@@ -1,10 +1,8 @@
 package nbc.c1oud_mall.point.presentation;
 
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import nbc.c1oud_mall.common.response.ApiResponse;
 import nbc.c1oud_mall.point.application.PointService;
-import nbc.c1oud_mall.point.application.dto.PointBalanceResponse;
 import nbc.c1oud_mall.point.application.dto.PointHistoryResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,15 +19,7 @@ public class PointController {
 
     private final PointService pointService;
 
-    @GetMapping("/balance")
-    public ResponseEntity<ApiResponse<PointBalanceResponse>> getPointBalance(
-            @AuthenticationPrincipal Long userId
-    ) {
-        PointBalanceResponse response = pointService.getPointBalance(userId);
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    @GetMapping("/histoties")
+    @GetMapping("/histories")
     public ResponseEntity<ApiResponse<List<PointHistoryResponse>>> getPointHistories(
             @AuthenticationPrincipal Long userId
     ) {
