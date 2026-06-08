@@ -202,4 +202,66 @@ class PointServiceTest {
                     .isEqualTo(ErrorCode.USER_NOT_FOUND);
         }
     }
+
+    @Nested
+    @DisplayName("restorePoints")
+    class Restore {
+
+        @Test
+        @DisplayName("정상: User 잔액 증가 + PointHistory(USE_CANCEL) 저장 + balanceAfter=잔액")
+        void restore_normal() {
+            given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+            given(entityManager.getReference(Order.class, ORDER_ID)).willReturn(orderRef);
+
+            pointService.restorePoints(USER_ID, 1_000L, payment);
+
+            assertThat(user.getPointBalance()).isEqualTo(6_000L);
+
+            ArgumentCaptor<PointHistory> captor = ArgumentCaptor.forClass(PointHistory.class);
+            verify(pointJpaRepository).save(captor.capture());
+            PointHistory history = captor.getValue();
+            assertThat(history.getUserId()).isEqualTo(USER_ID);
+            assertThat(history.getOrder()).isSameAs(orderRef);
+            assertThat(history.getPayment()).isSameAs(payment);
+            assertThat(history.getAmount()).isEqualTo(1_000L);
+            assertThat(history.getBalanceAfter()).isEqualTo(6_000L);
+            assertThat(history.getTransactionType()).isEqualTo(PointTransactionType.USE_CANCEL);
+        }
+
+        @Test
+        @DisplayName("PT001: amount=0 → POINT_AMOUNT_INVALID, PointHistory 미저장")
+        void restore_zero_amount_throws_pt001() {
+            given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+            assertThatThrownBy(() -> pointService.restorePoints(USER_ID, 0L, payment))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.POINT_AMOUNT_INVALID);
+
+            assertThat(user.getPointBalance()).isEqualTo(5_000L);
+            verify(pointJpaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("U003: User 미존재 → USER_NOT_FOUND")
+        void restore_user_not_found() {
+            given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> pointService.restorePoints(USER_ID, 1_000L, payment))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+
+        @Test
+        @DisplayName("User 비관적 락 조회 사용 (findByIdForUpdate)")
+        void restore_uses_pessimistic_lock_query() {
+            given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+            given(entityManager.getReference(Order.class, ORDER_ID)).willReturn(orderRef);
+
+            pointService.restorePoints(USER_ID, 1_000L, payment);
+
+            verify(userRepository).findByIdForUpdate(eq(USER_ID));
+        }
+    }
 }
