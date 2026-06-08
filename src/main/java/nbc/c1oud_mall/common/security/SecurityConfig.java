@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -42,6 +44,8 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/api/v1/auth/**").permitAll()
 				.requestMatchers("/api/v1/products/**").permitAll()
+				.requestMatchers("/api/v1/admin/users/*/role").hasRole("SUPER_ADMIN")
+				.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
 				// 웹훅 엔드포인트는 HMAC 서명이 인증 역할 (PortOneWebhookSignatureFilter)
 				.requestMatchers("/api/v1/payments/webhooks/**").permitAll()
@@ -57,6 +61,14 @@ public class SecurityConfig {
 			.addFilterBefore(portOneWebhookSignatureFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 		return http.build();
+	}
+
+	@Bean
+	public RoleHierarchy roleHierarchy() {
+		return RoleHierarchyImpl.fromHierarchy("""
+			ROLE_SUPER_ADMIN > ROLE_ADMIN
+			ROLE_ADMIN > ROLE_USER
+			""");
 	}
 
 	@Bean

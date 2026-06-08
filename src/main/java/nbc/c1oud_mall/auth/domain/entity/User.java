@@ -49,12 +49,12 @@ public class User extends BaseEntity {
 
 	private LocalDateTime deletedAt;
 
-	public User (String email, String password, String name, String phoneNumber) {
+	public User(String email, String password, String name, String phoneNumber, UserRole role) {
 		this.email = email;
 		this.password = password;
 		this.name = name;
 		this.phoneNumber = phoneNumber;
-		this.role = UserRole.USER;
+		this.role = role;
 		this.pointBalance = 0L;
 	}
 
@@ -77,4 +77,7 @@ public class User extends BaseEntity {
 		this.pointBalance += amount;
 	}
 
+	public void promoteToAdmin() {
+		this.role = UserRole.ADMIN;
+	}
 }
