@@ -33,19 +33,19 @@ class PaymentCompensationServiceTest {
         service.compensate(PORTONE_ID, REASON);
 
         verify(txOp).compensateDb(PORTONE_ID, REASON);
-        verify(portOnePaymentCancelPort).cancel(PORTONE_ID, REASON);
+        verify(portOnePaymentCancelPort).cancel(PORTONE_ID, null, REASON, null);
     }
 
     @Test
     @DisplayName("PortOne 취소 실패 → log만, compensate 정상 종료 (예외 전파 X)")
     void compensate_portone_failure_swallowed() {
         doThrow(new BusinessException(ErrorCode.PORTONE_CANCEL_FAILED))
-                .when(portOnePaymentCancelPort).cancel(PORTONE_ID, REASON);
+                .when(portOnePaymentCancelPort).cancel(PORTONE_ID, null, REASON, null);
 
         assertThatCode(() -> service.compensate(PORTONE_ID, REASON))
                 .doesNotThrowAnyException();
 
         verify(txOp).compensateDb(PORTONE_ID, REASON);
-        verify(portOnePaymentCancelPort).cancel(PORTONE_ID, REASON);
+        verify(portOnePaymentCancelPort).cancel(PORTONE_ID, null, REASON, null);
     }
 }
