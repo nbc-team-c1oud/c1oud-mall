@@ -11,7 +11,6 @@ import nbc.c1oud_mall.cart.application.CartService;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
-import nbc.c1oud_mall.payment.infrastructure.mock.MockInventoryService;
 import nbc.c1oud_mall.point.application.PointService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,8 +52,6 @@ class PaymentConfirmationServiceTest {
     private PointService pointService;
     @Mock
     private CartService cartService;
-    @Mock
-    private MockInventoryService mockInventoryService;
 
     @InjectMocks
     private PaymentConfirmationService service;
@@ -72,7 +69,7 @@ class PaymentConfirmationServiceTest {
     }
 
     @Test
-    @DisplayName("정상 확정: COMPLETED 전이 + 4개 mock 호출, alreadyCompleted=false, 보상 미호출")
+    @DisplayName("정상 확정: COMPLETED 전이 + 협력 BC 호출, alreadyCompleted=false, 보상 미호출")
     void confirm_normal_flow() {
         Payment payment = pendingPayment(9_000L, 1_000L);
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
@@ -90,7 +87,6 @@ class PaymentConfirmationServiceTest {
         verify(pointService).deductPoints(eq(USER_ID), eq(1_000L), eq(payment));
         verify(pointService, never()).accruePoints(any(), anyLong(), any());
         verify(cartService).clearCart(USER_ID);
-        verify(mockInventoryService).confirmByOrderId(ORDER_ID);
         verifyNoInteractions(paymentCompensationService);
     }
 
