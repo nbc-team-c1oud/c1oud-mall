@@ -2,14 +2,12 @@ package nbc.c1oud_mall.point.application;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
-import nbc.c1oud_mall.auth.application.Service.UserService;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.auth.infrastructure.UserRepository;
 import nbc.c1oud_mall.common.exception.BusinessException;
 import nbc.c1oud_mall.common.exception.ErrorCode;
 import nbc.c1oud_mall.order.domain.Order;
 import nbc.c1oud_mall.payment.domain.Payment;
-import nbc.c1oud_mall.point.application.dto.PointBalanceResponse;
 import nbc.c1oud_mall.point.application.dto.PointHistoryResponse;
 import nbc.c1oud_mall.point.domain.PointHistory;
 import nbc.c1oud_mall.point.domain.PointTransactionType;
@@ -25,14 +23,8 @@ import java.util.List;
 public class PointService {
 
     private final PointJpaRepository pointJpaRepository;
-    private final UserService userService;
     private final UserRepository userRepository;
     private final EntityManager entityManager;
-
-    public PointBalanceResponse getPointBalance(Long userId) {
-        User user = userService.findById(userId);
-        return new PointBalanceResponse(user.getPointBalance());
-    }
 
     public List<PointHistoryResponse> getPointHistories(Long userId) {
         return pointJpaRepository.findByUserIdOrderByCreatedAtDesc(userId)
