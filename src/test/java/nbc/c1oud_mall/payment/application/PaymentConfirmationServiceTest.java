@@ -8,7 +8,7 @@ import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
 import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand;
 import nbc.c1oud_mall.cart.application.CartService;
-import nbc.c1oud_mall.common.config.PointPolicy;
+import nbc.c1oud_mall.point.domain.PointPolicy;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
