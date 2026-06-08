@@ -20,3 +20,8 @@ portone:
 jwt:
   secret: dkantodrkrdjqtdltkfrltlwkrdlqslek
   expiration: 3600000
+
+# ─── 적립 포인트 정책 (ADR-0009) ───
+# basis points (1bp = 0.01%) 단위. 100 = 1.00%.
+points:
+  accrual-rate-basis-points: 100
