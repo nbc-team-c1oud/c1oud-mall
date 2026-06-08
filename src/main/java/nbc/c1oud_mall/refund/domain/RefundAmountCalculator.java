@@ -9,9 +9,11 @@ import java.util.List;
  * - 복합결제 비율 분리:
  *     pgRefundAmount    = floor(total × pgAmount / totalAmount)
  *     pointRefundAmount = total - pgRefundAmount   (잔액 흡수)
+ * - 적립 포인트 비례 회수:
+ *     pointEarnedRecoverAmount = floor(total × pointEarnedAmount / totalAmount)
  * - 소수점 처리 정책: PG는 floor, 포인트가 끝수 흡수 (사용자 무손해 + 합계 보장)
  *
- * 정책 근거는 ADR-0008 참조.
+ * 정책 근거는 ADR-0008, ADR-0009 참조.
  *
  * 순수 함수형 도메인 서비스 — 외부 의존 없음, 상태 없음.
  */
@@ -50,6 +52,13 @@ public class RefundAmountCalculator {
             pointRefundAmount = totalRefundAmount - pgRefundAmount;
         }
 
-        return new RefundBreakdown(pgRefundAmount, pointRefundAmount);
+        // 적립 포인트 비례 회수액 — 환불비율 × 적립액 (floor)
+        long pointEarnedRecoverAmount = 0L;
+        if (payment.pointEarnedAmount() > 0L) {
+            pointEarnedRecoverAmount =
+                    (totalRefundAmount * payment.pointEarnedAmount()) / payment.totalAmount();
+        }
+
+        return new RefundBreakdown(pgRefundAmount, pointRefundAmount, pointEarnedRecoverAmount);
     }
 }

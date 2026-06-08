@@ -18,15 +18,15 @@ class RefundTest {
     private static final String REASON = "단순 변심";
 
     private RefundablePayment completedPayment() {
-        return new RefundablePayment(PAYMENT_ID, USER_ID, true, 10_000L, 9_000L, 1_000L, "portone-test-001");
+        return new RefundablePayment(PAYMENT_ID, USER_ID, true, 10_000L, 9_000L, 1_000L, 0L, "portone-test-001");
     }
 
     private RefundablePayment pendingPayment() {
-        return new RefundablePayment(PAYMENT_ID, USER_ID, false, 10_000L, 9_000L, 1_000L, "portone-test-002");
+        return new RefundablePayment(PAYMENT_ID, USER_ID, false, 10_000L, 9_000L, 1_000L, 0L, "portone-test-002");
     }
 
     private RefundBreakdown zeroBreakdown() {
-        return new RefundBreakdown(0L, 0L);
+        return new RefundBreakdown(0L, 0L, 0L);
     }
 
     @Nested
@@ -72,7 +72,7 @@ class RefundTest {
         @Test
         @DisplayName("breakdown은 입력 그대로 보존된다 (Story 1-2 calculator 결과 주입 가정)")
         void breakdown_is_preserved() {
-            RefundBreakdown breakdown = new RefundBreakdown(4_500L, 500L);
+            RefundBreakdown breakdown = new RefundBreakdown(4_500L, 500L, 0L);
             List<RefundItemRequest> items = List.of(
                     new RefundItemRequest(1L, 1, 1, 5_000L));
 
@@ -161,9 +161,11 @@ class RefundTest {
         @Test
         @DisplayName("RefundBreakdown 자체: 음수 금액은 IllegalArgumentException")
         void negative_breakdown_amount_throws_illegal_argument() {
-            assertThatThrownBy(() -> new RefundBreakdown(-1L, 0L))
+            assertThatThrownBy(() -> new RefundBreakdown(-1L, 0L, 0L))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> new RefundBreakdown(0L, -1L))
+            assertThatThrownBy(() -> new RefundBreakdown(0L, -1L, 0L))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new RefundBreakdown(0L, 0L, -1L))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

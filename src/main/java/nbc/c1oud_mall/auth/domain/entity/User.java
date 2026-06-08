@@ -77,4 +77,19 @@ public class User extends BaseEntity {
 		this.pointBalance += amount;
 	}
 
+	/**
+	 * 적립 포인트 회수용 leniency 차감 — 잔액이 amount보다 작으면 잔액까지만 차감하고
+	 * 실제 차감액을 반환한다. 음수 잔액 방지가 목적 (환불 회수 흐름 전용).
+	 *
+	 * @return 실제로 차감된 금액. amount보다 작으면 잔액 부족.
+	 */
+	public long useEarnedPointsLenient(long amount) {
+		if (amount <= 0L) {
+			throw new BusinessException(ErrorCode.POINT_AMOUNT_INVALID);
+		}
+		long actualDeduction = Math.min(this.pointBalance, amount);
+		this.pointBalance -= actualDeduction;
+		return actualDeduction;
+	}
+
 }

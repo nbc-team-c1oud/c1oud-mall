@@ -15,6 +15,7 @@ import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
+import nbc.c1oud_mall.point.infrastructure.PointJpaRepository;
 import nbc.c1oud_mall.product.domain.Product;
 import nbc.c1oud_mall.product.domain.ProductStatus;
 import nbc.c1oud_mall.product.infrastructure.ProductJpaRepository;
@@ -54,6 +55,8 @@ class PaymentConfirmationServiceCartClearIntegrationTest {
     private ProductJpaRepository productJpaRepository;
     @Autowired
     private CartItemJpaRepository cartItemJpaRepository;
+    @Autowired
+    private PointJpaRepository pointJpaRepository;
 
     @MockitoBean
     private PortOnePaymentQueryPort portOnePaymentQueryPort;
@@ -62,6 +65,7 @@ class PaymentConfirmationServiceCartClearIntegrationTest {
 
     @AfterEach
     void cleanup() {
+        pointJpaRepository.deleteAll();   // PointHistory가 Payment·Order FK 보유 → 먼저
         cartItemJpaRepository.deleteAll();
         paymentRepository.deleteAll();
         orderJpaRepository.deleteAll();
@@ -125,5 +129,10 @@ class PaymentConfirmationServiceCartClearIntegrationTest {
 
         // cart 비움도 함께 검증
         assertThat(cartItemJpaRepository.findByUserId(user.getId())).isEmpty();
+
+        // 적립 포인트 검증: totalAmount 5000 × 1% = 50p 적립
+        User userFromDb = userRepository.findById(user.getId()).orElseThrow();
+        assertThat(userFromDb.getPointBalance()).isEqualTo(50L);
+        assertThat(paymentFromDb.getPointEarnedAmount()).isEqualTo(50L);
     }
 }

@@ -129,6 +129,8 @@ public class RefundProcessService {
         return new RefundablePayment(
                 payment.getId(), payment.getUserId(), payment.isCompleted(),
                 payment.getBreakdown().getTotalAmount(), payment.getBreakdown().getPgAmount(),
-                payment.getBreakdown().getPointUsedAmount(), payment.getPortonePaymentId());
+                payment.getBreakdown().getPointUsedAmount(),
+                payment.getPointEarnedAmount(),
+                payment.getPortonePaymentId());
     }
 }

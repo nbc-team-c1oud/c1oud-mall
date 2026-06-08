@@ -83,16 +83,24 @@ public class RefundTxOp {
         RefundablePayment rp = new RefundablePayment(
                 payment.getId(), payment.getUserId(), payment.isCompleted(),
                 payment.getBreakdown().getTotalAmount(), payment.getBreakdown().getPgAmount(),
-                payment.getBreakdown().getPointUsedAmount(), payment.getPortonePaymentId());
+                payment.getBreakdown().getPointUsedAmount(),
+                payment.getPointEarnedAmount(),
+                payment.getPortonePaymentId());
 
         Refund refund = Refund.of(rp, lockedRequests, breakdown, command.reason());
         refund.markDbCommitted();
         refundJpaRepository.save(refund);
 
-        // 5. 포인트 복구 (사용분 환원 — consistency.md §5: Inventory보다 먼저)
+        // 5. 포인트 사용분 환원 (consistency.md §5: Inventory보다 먼저)
         if (breakdown.getPointRefundAmount() > 0) {
             pointService.restorePoints(command.userId(),
                     breakdown.getPointRefundAmount(), payment);
+        }
+
+        // 5-2. 적립 포인트 비례 회수 (잔액 부족 시 잔액까지만 — lenient)
+        if (breakdown.getPointEarnedRecoverAmount() > 0) {
+            pointService.cancelEarnedPoints(command.userId(),
+                    breakdown.getPointEarnedRecoverAmount(), payment);
         }
 
         // 6. 재고 복구 (productId 정렬 → 비관락 단위 호출, 데드락 방지)

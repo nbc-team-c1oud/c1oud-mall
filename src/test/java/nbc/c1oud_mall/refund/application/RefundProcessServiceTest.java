@@ -71,7 +71,7 @@ class RefundProcessServiceTest {
     void process_pg_cancel_success() {
         Payment payment = completedPayment(9_000L, 1_000L);
         Order order = mockOrderWithItem(ORDER_ITEM_ID, 5_000L, 2);
-        RefundBreakdown breakdown = new RefundBreakdown(4_500L, 500L);
+        RefundBreakdown breakdown = new RefundBreakdown(4_500L, 500L, 0L);
         Refund refund = mockRefund(42L);
 
         given(paymentJpaRepository.findByOrderId(ORDER_ID)).willReturn(Optional.of(payment));
@@ -153,7 +153,7 @@ class RefundProcessServiceTest {
     void process_does_not_call_pg_cancel_when_tx_fails() {
         Payment payment = completedPayment(9_000L, 1_000L);
         Order order = mockOrderWithItem(ORDER_ITEM_ID, 5_000L, 2);
-        RefundBreakdown breakdown = new RefundBreakdown(4_500L, 500L);
+        RefundBreakdown breakdown = new RefundBreakdown(4_500L, 500L, 0L);
 
         given(paymentJpaRepository.findByOrderId(ORDER_ID)).willReturn(Optional.of(payment));
         given(orderJpaRepository.findByOrderId(ORDER_ID)).willReturn(Optional.of(order));
@@ -176,7 +176,7 @@ class RefundProcessServiceTest {
     void process_returns_db_committed_when_pg_cancel_fails() {
         Payment payment = completedPayment(9_000L, 1_000L);
         Order order = mockOrderWithItem(ORDER_ITEM_ID, 5_000L, 2);
-        RefundBreakdown breakdown = new RefundBreakdown(4_500L, 500L);
+        RefundBreakdown breakdown = new RefundBreakdown(4_500L, 500L, 0L);
         Refund refund = mockRefund(42L);
 
         given(paymentJpaRepository.findByOrderId(ORDER_ID)).willReturn(Optional.of(payment));
@@ -201,7 +201,7 @@ class RefundProcessServiceTest {
     void process_skips_portone_when_pg_amount_is_zero() {
         Payment payment = pointOnlyPayment(5_000L);
         Order order = mockOrderWithItem(ORDER_ITEM_ID, 5_000L, 1);
-        RefundBreakdown breakdown = new RefundBreakdown(0L, 5_000L);
+        RefundBreakdown breakdown = new RefundBreakdown(0L, 5_000L, 0L);
         Refund refund = mockRefund(55L);
 
         given(paymentJpaRepository.findByOrderId(ORDER_ID)).willReturn(Optional.of(payment));

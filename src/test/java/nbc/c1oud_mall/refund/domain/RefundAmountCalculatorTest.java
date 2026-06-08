@@ -17,7 +17,11 @@ class RefundAmountCalculatorTest {
     private final RefundAmountCalculator calculator = new RefundAmountCalculator();
 
     private RefundablePayment payment(long totalAmount, long pgAmount, long pointUsedAmount) {
-        return new RefundablePayment(1L, 100L, true, totalAmount, pgAmount, pointUsedAmount, "portone-calc-test");
+        return new RefundablePayment(1L, 100L, true, totalAmount, pgAmount, pointUsedAmount, 0L, "portone-calc-test");
+    }
+
+    private RefundablePayment paymentWithEarned(long totalAmount, long pgAmount, long pointUsedAmount, long pointEarnedAmount) {
+        return new RefundablePayment(1L, 100L, true, totalAmount, pgAmount, pointUsedAmount, pointEarnedAmount, "portone-calc-test");
     }
 
     private List<RefundItemRequest> single(long priceSnapshot, int quantity) {
