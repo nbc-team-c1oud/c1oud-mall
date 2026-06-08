@@ -78,8 +78,19 @@ Story 2-2 결제 확정 서비스(`PaymentConfirmationService`)는 단일 트랜
 - `MockPointService.java`, `MockCartService.java` 삭제
 - `PaymentConfirmationService` 의존성 swap + 단위 테스트 갱신
 
-### 3차 (남은 작업) — `MockInventoryService → InventoryService`
-재고 BC 실 구현 도입 시점에 동일 패턴 적용 예정. 현재 `MockInventoryService.confirmByOrderId/restoreByOrderId`만 잔존.
+### 3차 — `MockInventoryService → ProductService 직접 호출` (2026-06-08)
+재고 BC는 별도 `InventoryService` 클래스 신설 없이 **이미 존재하는 `ProductService.deductStockWithLock`/`restoreStockWithLock`**(비관적 락 + `Product.stockQuantity` 직접 조작)을 직접 사용하는 형태로 정리. §47 결정("port를 두지 않는다")이 동일하게 적용되어 `payment.application.PaymentCompensationTxOp`가 `ProductService`를 직접 주입한다 (OrderFacade 패턴과 일치).
+
+- `MockInventoryService.confirmByOrderId(orderId)` 호출(결제 확정 시점) — **호출 자체 제거**. 재고는 `OrderFacade.createOrder` 시점에 이미 차감 확정되므로 결제 확정 단계는 inventory와 무관함을 명시적 계약으로 못박음.
+- `MockInventoryService.restoreByOrderId(orderId)` 호출(결제 보상 시점) — `OrderService.findOrderEntity`로 Order+items 로드 → `productId` 정렬 → `productService.restoreStockWithLock(productId, quantity)` per item으로 교체. 데드락 방지 정렬은 `OrderFacade.createOrder` 패턴과 일치.
+- `MockInventoryService.java` 삭제 + `payment/infrastructure/mock/` 디렉터리 정리.
+
+### 4차 — `MockPointRestoreAdapter / PointRestorePort → PointService.restorePoints 직접 호출` (2026-06-08)
+환불 흐름에 도입돼 있던 포인트 복구 port 추상화(`refund.application.PointRestorePort` + `refund.infrastructure.MockPointRestoreAdapter`)도 §47 결정에 맞춰 제거. 기존 `PointService.deductPoints/accruePoints`와 동일한 패턴으로 `restorePoints(userId, amount, payment)` 메서드를 추가하고 `refund.application.RefundTxOp`가 직접 주입한다.
+
+- `PointService.restorePoints` — User 비관적 락 + `earnPoints`로 잔액 환원 + `PointHistory(USE_CANCEL, "환불에 따른 포인트 사용 취소")` 저장.
+- `RefundTxOp` 락 순서를 consistency.md §5(Order → Payment → Point → Inventory)에 맞춰 재배치: Refund 저장 → Point 복구 → Inventory 복구.
+- 삭제: `PointRestorePort.java`, `MockPointRestoreAdapter.java`.
 
 ## References
 

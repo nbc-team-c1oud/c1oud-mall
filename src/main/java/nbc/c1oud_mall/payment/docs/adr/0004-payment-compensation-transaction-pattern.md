@@ -21,7 +21,7 @@ consistency.md §6 규칙:
 
 1. **`PaymentCompensationService.compensate(portonePaymentId, reason)`는 비-트랜잭션 메서드**.
 2. 내부에서 두 단계로 분리:
-   1. **`PaymentCompensationTxOp.compensateDb(...)`** — 별도 `@Component`로 분리한 컴포넌트의 `@Transactional(propagation = Propagation.REQUIRES_NEW)` 메서드. Payment.markFailed + 주문 취소(`MockOrderService.cancelOrder`) + 재고 복구(`MockInventoryService.restoreByOrderId`) DB 작업 commit.
+   1. **`PaymentCompensationTxOp.compensateDb(...)`** — 별도 `@Component`로 분리한 컴포넌트의 `@Transactional(propagation = Propagation.REQUIRES_NEW)` 메서드. 처리 순서: ① `OrderService.findOrderEntity`로 Order+items 로드 → ② `Payment.markFailed` → ③ `productId` 정렬 후 `ProductService.restoreStockWithLock(productId, quantity)` per item으로 재고 복구(consistency.md §5 락 순서·데드락 방지 정렬) → ④ `OrderService.cancelOrder`. (재고 복구는 2026-06-08 이전엔 `MockInventoryService.restoreByOrderId` placeholder였음 — ADR-0003 3차 진행 참조.) DB 작업 commit.
    2. **`PortOnePaymentCancelPort.cancel(...)`** — TX 종료 후 외부 호출. 4xx/5xx/IO 실패 시 `BusinessException(PORTONE_CANCEL_FAILED, PM009)` 발생.
 3. **PortOne 취소 실패는 `log.error`로 처리**, `compensate` 메서드는 정상 종료. 호출자에게 예외 전파하지 않음 (보상은 백그라운드 처리로 간주).
 4. **`PaymentConfirmationService` 정정**: 검증 단계 try-catch + `isCompensable(ex)` 판단 후 `compensate` 호출 → 원 `BusinessException` 재 throw. 메인 TX는 롤백되고 클라이언트는 4xx 받음.

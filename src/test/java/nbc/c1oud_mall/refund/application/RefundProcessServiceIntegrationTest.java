@@ -10,6 +10,7 @@ import nbc.c1oud_mall.order.infrastructure.OrderJpaRepository;
 import nbc.c1oud_mall.payment.application.PortOnePaymentCancelPort;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
+import nbc.c1oud_mall.point.application.PointService;
 import nbc.c1oud_mall.product.domain.Product;
 import nbc.c1oud_mall.product.domain.ProductStatus;
 import nbc.c1oud_mall.product.infrastructure.ProductJpaRepository;
@@ -62,17 +63,19 @@ class RefundProcessServiceIntegrationTest {
     @MockitoBean
     private PortOnePaymentCancelPort portOnePaymentCancelPort;
     @MockitoBean
-    private PointRestorePort pointRestorePort;
+    private PointService pointService;
 
     private Long savedUserId;
     private Long savedOrderId;
     private Long savedOrderItemId;
     private Long savedPaymentId;
+    private Long savedProductId;
+    private Integer initialStockQuantity;
     private String portonePaymentId;
 
     @BeforeEach
     void resetMocks() {
-        Mockito.reset(portOnePaymentCancelPort, pointRestorePort);
+        Mockito.reset(portOnePaymentCancelPort, pointService);
     }
 
     @AfterEach
@@ -91,14 +94,16 @@ class RefundProcessServiceIntegrationTest {
                 new User("refund-test@test.com", "pw", "환불테스터", "010-0000-1111"));
         savedUserId = user.getId();
 
+        initialStockQuantity = 10;
         Product product = productJpaRepository.saveAndFlush(Product.builder()
                 .name("테스트상품")
                 .price(5_000L)
-                .stockQuantity(10)
+                .stockQuantity(initialStockQuantity)
                 .category("ELECTRONICS")
                 .status(ProductStatus.SALE)
                 .description("통합테스트용")
                 .build());
+        savedProductId = product.getId();
 
         OrderItem item = new OrderItem(product, "테스트상품", 5_000L, qty);
         Order order = Order.builder()
@@ -138,6 +143,10 @@ class RefundProcessServiceIntegrationTest {
 
         verify(portOnePaymentCancelPort).cancel(
                 portonePaymentId, 10_000L, "단순 변심", "refund-" + result.refundId());
+
+        // 재고 복구 검증: stockQuantity가 환불수량(2)만큼 증가
+        Product productAfter = productJpaRepository.findById(savedProductId).orElseThrow();
+        assertThat(productAfter.getStockQuantity()).isEqualTo(initialStockQuantity + 2);
     }
 
     @Test
@@ -161,9 +170,9 @@ class RefundProcessServiceIntegrationTest {
     @Test
     @DisplayName("롤백: 포인트 복구 실패 시 Refund DB 미저장, cancel 미호출")
     void process_rolls_back_when_point_restore_throws() {
-        setupFixture(8_000L, 2_000L, 2); // pointUsedAmount > 0 → pointRestorePort.restore() 호출
+        setupFixture(8_000L, 2_000L, 2); // pointUsedAmount > 0 → pointService.restorePoints() 호출
         willThrow(new RuntimeException("포인트 서버 오류"))
-                .given(pointRestorePort).restore(anyLong(), anyLong(), anyLong());
+                .given(pointService).restorePoints(anyLong(), anyLong(), any(Payment.class));
 
         RefundCommand command = new RefundCommand(savedOrderId, savedUserId,
                 List.of(new RefundItemCommand(savedOrderItemId, 2)), "롤백테스트");
@@ -173,6 +182,10 @@ class RefundProcessServiceIntegrationTest {
 
         assertThat(refundJpaRepository.count()).isZero();
         verify(portOnePaymentCancelPort, Mockito.never()).cancel(any(), any(), any(), any());
+
+        // 롤백 검증: 포인트 복구가 재고 복구보다 먼저 실행되므로 stockQuantity는 변경된 적 없음
+        Product productAfter = productJpaRepository.findById(savedProductId).orElseThrow();
+        assertThat(productAfter.getStockQuantity()).isEqualTo(initialStockQuantity);
     }
 
     @Test

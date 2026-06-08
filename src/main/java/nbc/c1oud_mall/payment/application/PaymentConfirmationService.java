@@ -10,7 +10,6 @@ import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.cart.application.CartService;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
 import nbc.c1oud_mall.order.application.OrderService;
-import nbc.c1oud_mall.payment.infrastructure.mock.MockInventoryService;
 import nbc.c1oud_mall.point.application.PointService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +28,6 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
     private final OrderService orderService;
     private final PointService pointService;
     private final CartService cartService;
-    private final MockInventoryService mockInventoryService;
 
     @Override
     public PaymentConfirmationResult confirm(PaymentConfirmationCommand command) {
@@ -70,7 +68,8 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
             pointService.accruePoints(payment.getUserId(), pointEarnedAmount, payment);
         }
         cartService.clearCart(payment.getUserId());
-        mockInventoryService.confirmByOrderId(payment.getOrderId());
+
+        // 재고는 OrderFacade.createOrder 시점에 이미 차감 확정 — 결제 확정 단계는 재고 관여 없음.
 
         return PaymentConfirmationResult.confirmed(payment);
     }

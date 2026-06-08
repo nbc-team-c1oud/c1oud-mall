@@ -79,4 +79,24 @@ public class PointService {
                 .description("결제 완료 포인트 적립")
                 .build());
     }
+
+    /**
+     * 환불에 따른 사용 포인트 복구. 호출자 트랜잭션(REQUIRED)에 합류.
+     * User 행 비관적 락으로 동시 변경 race 차단.
+     */
+    @Transactional
+    public void restorePoints(Long userId, long amount, Payment payment) {
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        user.earnPoints(amount);
+        pointJpaRepository.save(PointHistory.builder()
+                .userId(userId)
+                .order(entityManager.getReference(Order.class, payment.getOrderId()))
+                .payment(payment)
+                .amount(amount)
+                .balanceAfter(user.getPointBalance())
+                .transactionType(PointTransactionType.USE_CANCEL)
+                .description("환불에 따른 포인트 사용 취소")
+                .build());
+    }
 }

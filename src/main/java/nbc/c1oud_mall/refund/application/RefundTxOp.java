@@ -8,6 +8,8 @@ import nbc.c1oud_mall.order.domain.OrderItem;
 import nbc.c1oud_mall.order.infrastructure.OrderJpaRepository;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
+import nbc.c1oud_mall.point.application.PointService;
+import nbc.c1oud_mall.product.application.ProductService;
 import nbc.c1oud_mall.refund.application.dto.command.RefundCommand;
 import nbc.c1oud_mall.refund.application.dto.command.RefundItemCommand;
 import nbc.c1oud_mall.refund.domain.Refund;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -31,13 +34,14 @@ public class RefundTxOp {
     private final RefundJpaRepository refundJpaRepository;
     private final PaymentJpaRepository paymentJpaRepository;
     private final OrderJpaRepository orderJpaRepository;
-    private final InventoryRestorePort inventoryRestorePort;
-    private final PointRestorePort pointRestorePort;
+    private final ProductService productService;
+    private final PointService pointService;
 
     /**
-     * 비관적 락 획득 → 잔여 수량 재검증 → Refund 저장(DB_COMMITTED) → 재고/포인트 복구.
+     * 비관적 락 획득 → 잔여 수량 재검증 → Refund 저장(DB_COMMITTED) → 포인트/재고 복구.
      * 단일 @Transactional로 묶어 중간 실패 시 전체 롤백.
-     * 락 내부에서 외부 호출 금지 — mock 어댑터라 실질적으로 OK, 실구현 시에도 포트 계약 준수.
+     * 락 순서(consistency.md §5): Payment → Point → Inventory.
+     * 재고 복구는 ProductService.restoreStockWithLock per item (productId 정렬로 데드락 방지).
      */
     @Transactional
     public Refund executeRefund(RefundCommand command, RefundBreakdown breakdown) {
@@ -85,14 +89,19 @@ public class RefundTxOp {
         refund.markDbCommitted();
         refundJpaRepository.save(refund);
 
-        // 5. 재고 복구
-        inventoryRestorePort.restore(command.orderId(), lockedRequests);
-
-        // 6. 포인트 복구 (포인트 결제 사용분이 있을 때만)
+        // 5. 포인트 복구 (사용분 환원 — consistency.md §5: Inventory보다 먼저)
         if (breakdown.getPointRefundAmount() > 0) {
-            pointRestorePort.restore(command.userId(),
-                    breakdown.getPointRefundAmount(), payment.getId());
+            pointService.restorePoints(command.userId(),
+                    breakdown.getPointRefundAmount(), payment);
         }
+
+        // 6. 재고 복구 (productId 정렬 → 비관락 단위 호출, 데드락 방지)
+        lockedRequests.stream()
+                .sorted(Comparator.comparingLong(
+                        req -> itemMap.get(req.orderItemId()).getProductId()))
+                .forEach(req -> productService.restoreStockWithLock(
+                        itemMap.get(req.orderItemId()).getProductId(),
+                        req.quantity()));
 
         return refund;
     }
