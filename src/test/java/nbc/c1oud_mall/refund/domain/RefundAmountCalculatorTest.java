@@ -217,4 +217,61 @@ class RefundAmountCalculatorTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
+
+    @Nested
+    @DisplayName("적립 포인트 비례 회수")
+    class EarnedPointRecover {
+
+        @Test
+        @DisplayName("PG 전액 결제 + 적립 100p, 전액 환불 → 회수 100p")
+        void full_refund_recovers_all_earned() {
+            // pgAmount=10_000, totalAmount=10_000, earned=100. 전액(10_000원) 환불.
+            RefundBreakdown result = calculator.calculate(
+                    paymentWithEarned(10_000L, 10_000L, 0L, 100L), single(10_000L, 1));
+
+            assertThat(result.getPgRefundAmount()).isEqualTo(10_000L);
+            assertThat(result.getPointEarnedRecoverAmount()).isEqualTo(100L);
+        }
+
+        @Test
+        @DisplayName("절반 환불 → 비례 회수 (floor)")
+        void half_refund_recovers_half_earned() {
+            // totalAmount=10_000, earned=100. 5_000원(50%) 환불 → 회수 50p.
+            RefundBreakdown result = calculator.calculate(
+                    paymentWithEarned(10_000L, 10_000L, 0L, 100L), single(5_000L, 1));
+
+            assertThat(result.getPgRefundAmount()).isEqualTo(5_000L);
+            assertThat(result.getPointEarnedRecoverAmount()).isEqualTo(50L);
+        }
+
+        @Test
+        @DisplayName("소수점: 1/3 환불 + 적립 100p → floor(33.33) = 33p 회수")
+        void fractional_recover_uses_floor() {
+            RefundBreakdown result = calculator.calculate(
+                    paymentWithEarned(9_000L, 9_000L, 0L, 100L), single(3_000L, 1));
+
+            assertThat(result.getPointEarnedRecoverAmount()).isEqualTo(33L); // 3_000 * 100 / 9_000
+        }
+
+        @Test
+        @DisplayName("적립 없는 결제 → 회수 0")
+        void no_earned_returns_zero_recover() {
+            RefundBreakdown result = calculator.calculate(
+                    paymentWithEarned(10_000L, 10_000L, 0L, 0L), single(10_000L, 1));
+
+            assertThat(result.getPointEarnedRecoverAmount()).isZero();
+        }
+
+        @Test
+        @DisplayName("복합결제 + 적립 → 회수도 비례")
+        void mixed_payment_with_earned_recovers_proportionally() {
+            // totalAmount=10_000 (PG 8_000 + Point 2_000), earned=100. 절반(5_000) 환불.
+            RefundBreakdown result = calculator.calculate(
+                    paymentWithEarned(10_000L, 8_000L, 2_000L, 100L), single(5_000L, 1));
+
+            assertThat(result.getPgRefundAmount()).isEqualTo(4_000L); // 5000*8000/10000
+            assertThat(result.getPointRefundAmount()).isEqualTo(1_000L);
+            assertThat(result.getPointEarnedRecoverAmount()).isEqualTo(50L); // 5000*100/10000
+        }
+    }
 }

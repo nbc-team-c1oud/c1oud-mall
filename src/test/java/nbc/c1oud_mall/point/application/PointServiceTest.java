@@ -264,4 +264,66 @@ class PointServiceTest {
             verify(userRepository).findByIdForUpdate(eq(USER_ID));
         }
     }
+
+    @Nested
+    @DisplayName("cancelEarnedPoints")
+    class CancelEarned {
+
+        @Test
+        @DisplayName("정상: 잔액 충분 → 전액 차감 + PointHistory(EARN_CANCEL) 저장")
+        void cancel_earned_normal() {
+            given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+            given(entityManager.getReference(Order.class, ORDER_ID)).willReturn(orderRef);
+
+            pointService.cancelEarnedPoints(USER_ID, 200L, payment);
+
+            assertThat(user.getPointBalance()).isEqualTo(4_800L);
+
+            ArgumentCaptor<PointHistory> captor = ArgumentCaptor.forClass(PointHistory.class);
+            verify(pointJpaRepository).save(captor.capture());
+            PointHistory history = captor.getValue();
+            assertThat(history.getAmount()).isEqualTo(200L);
+            assertThat(history.getBalanceAfter()).isEqualTo(4_800L);
+            assertThat(history.getTransactionType()).isEqualTo(PointTransactionType.EARN_CANCEL);
+        }
+
+        @Test
+        @DisplayName("잔액 부족: 잔액까지만 차감 + 실제 차감액으로 PointHistory 저장 (예외 안 던짐)")
+        void cancel_earned_lenient_when_insufficient() {
+            ReflectionTestUtils.setField(user, "pointBalance", 50L); // 요청 200, 잔액 50
+            given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+            given(entityManager.getReference(Order.class, ORDER_ID)).willReturn(orderRef);
+
+            pointService.cancelEarnedPoints(USER_ID, 200L, payment);
+
+            assertThat(user.getPointBalance()).isEqualTo(0L);
+
+            ArgumentCaptor<PointHistory> captor = ArgumentCaptor.forClass(PointHistory.class);
+            verify(pointJpaRepository).save(captor.capture());
+            assertThat(captor.getValue().getAmount()).isEqualTo(50L); // 실제 차감액
+        }
+
+        @Test
+        @DisplayName("잔액 0: 차감 없음 + PointHistory 저장도 스킵")
+        void cancel_earned_skips_save_when_balance_zero() {
+            ReflectionTestUtils.setField(user, "pointBalance", 0L);
+            given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.of(user));
+
+            pointService.cancelEarnedPoints(USER_ID, 100L, payment);
+
+            assertThat(user.getPointBalance()).isEqualTo(0L);
+            verify(pointJpaRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("U003: User 미존재 → USER_NOT_FOUND")
+        void cancel_earned_user_not_found() {
+            given(userRepository.findByIdForUpdate(USER_ID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> pointService.cancelEarnedPoints(USER_ID, 100L, payment))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
+    }
 }
