@@ -8,6 +8,7 @@ import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
 import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand;
 import nbc.c1oud_mall.cart.application.CartService;
+import nbc.c1oud_mall.common.config.PointPolicy;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
@@ -52,6 +53,8 @@ class PaymentConfirmationServiceTest {
     private PointService pointService;
     @Mock
     private CartService cartService;
+    @Mock
+    private PointPolicy pointPolicy;
 
     @InjectMocks
     private PaymentConfirmationService service;
@@ -69,11 +72,12 @@ class PaymentConfirmationServiceTest {
     }
 
     @Test
-    @DisplayName("정상 확정: COMPLETED 전이 + 협력 BC 호출, alreadyCompleted=false, 보상 미호출")
+    @DisplayName("정상 확정: COMPLETED 전이 + 협력 BC 호출 + 적립 포인트 1% 호출")
     void confirm_normal_flow() {
         Payment payment = pendingPayment(9_000L, 1_000L);
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
+        when(pointPolicy.calculateEarnedAmount(10_000L)).thenReturn(100L);
 
         PaymentConfirmationResult result =
                 service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
@@ -85,7 +89,7 @@ class PaymentConfirmationServiceTest {
 
         verify(orderService).completeOrder(ORDER_ID);
         verify(pointService).deductPoints(eq(USER_ID), eq(1_000L), eq(payment));
-        verify(pointService, never()).accruePoints(any(), anyLong(), any());
+        verify(pointService).accruePoints(eq(USER_ID), eq(100L), eq(payment));
         verify(cartService).clearCart(USER_ID);
         verifyNoInteractions(paymentCompensationService);
     }
@@ -195,15 +199,17 @@ class PaymentConfirmationServiceTest {
     }
 
     @Test
-    @DisplayName("포인트 사용 0 → deductPoints 미호출, 나머지 mock 정상 호출")
+    @DisplayName("포인트 사용 0 → deductPoints 미호출, 적립은 정상 호출")
     void confirm_no_point_used_skips_deduct() {
         Payment payment = pendingPayment(10_000L, 0L);
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(10_000L));
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
+        when(pointPolicy.calculateEarnedAmount(10_000L)).thenReturn(100L);
 
         service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
 
         verify(pointService, never()).deductPoints(any(), anyLong(), any());
+        verify(pointService).accruePoints(eq(USER_ID), eq(100L), eq(payment));
         verify(orderService).completeOrder(ORDER_ID);
     }
 }

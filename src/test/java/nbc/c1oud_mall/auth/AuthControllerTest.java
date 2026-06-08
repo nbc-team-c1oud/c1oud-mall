@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import nbc.c1oud_mall.auth.domain.UserRole;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.auth.infrastructure.UserRepository;
 import nbc.c1oud_mall.auth.presentation.dto.LoginRequest;
@@ -52,7 +53,7 @@ class AuthControllerTest {
 	@Test
 	void 회원가입_이메일중복_실패() throws Exception {
 		// 미리 유저 저장
-		userRepository.save(new User("test@test.com", passwordEncoder.encode("password123"), "홍길동", "010-1234-5678"));
+		userRepository.save(new User("test@test.com", passwordEncoder.encode("password123"), "홍길동", "010-1234-5678", UserRole.USER));
 
 		SignupRequest request = new SignupRequest("test@test.com", "password123", "홍길동", "010-1234-5678");
 
@@ -69,7 +70,7 @@ class AuthControllerTest {
 	@Test
 	void 로그인_성공() throws Exception {
 		// 미리 유저 저장
-		userRepository.save(new User("test@test.com", passwordEncoder.encode("password123"), "홍길동", "010-1234-5678"));
+		userRepository.save(new User("test@test.com", passwordEncoder.encode("password123"), "홍길동", "010-1234-5678", UserRole.USER));
 
 		LoginRequest request = new LoginRequest("test@test.com", "password123");
 
@@ -86,7 +87,7 @@ class AuthControllerTest {
 	@Test
 	void 로그인_비밀번호불일치_실패() throws Exception {
 		// 미리 유저 저장
-		userRepository.save(new User("test@test.com", passwordEncoder.encode("password123"), "홍길동", "010-1234-5678"));
+		userRepository.save(new User("test@test.com", passwordEncoder.encode("password123"), "홍길동", "010-1234-5678", UserRole.USER));
 
 		LoginRequest request = new LoginRequest("test@test.com", "password456");
 

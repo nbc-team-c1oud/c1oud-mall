@@ -2,6 +2,7 @@ package nbc.c1oud_mall.point.application;
 
 import jakarta.persistence.EntityManager;
 import nbc.c1oud_mall.auth.application.Service.UserService;
+import nbc.c1oud_mall.auth.domain.UserRole;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.auth.infrastructure.UserRepository;
 import nbc.c1oud_mall.common.exception.BusinessException;
@@ -59,7 +60,7 @@ class PointServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = new User("u@test.com", "pw", "tester", "01000000000");
+        user = new User("u@test.com", "pw", "tester", "01000000000", UserRole.USER);
         ReflectionTestUtils.setField(user, "id", USER_ID);
         ReflectionTestUtils.setField(user, "pointBalance", 5_000L);
 

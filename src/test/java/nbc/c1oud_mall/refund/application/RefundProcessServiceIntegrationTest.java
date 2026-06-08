@@ -1,5 +1,6 @@
 package nbc.c1oud_mall.refund.application;
 
+import nbc.c1oud_mall.auth.domain.UserRole;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.auth.infrastructure.UserRepository;
 import nbc.c1oud_mall.common.exception.BusinessException;
@@ -91,7 +92,7 @@ class RefundProcessServiceIntegrationTest {
 
     private void setupFixture(long pgAmount, long pointUsedAmount, int qty) {
         User user = userRepository.saveAndFlush(
-                new User("refund-test@test.com", "pw", "환불테스터", "010-0000-1111"));
+                new User("refund-test@test.com", "pw", "환불테스터", "010-0000-1111", UserRole.USER));
         savedUserId = user.getId();
 
         initialStockQuantity = 10;
