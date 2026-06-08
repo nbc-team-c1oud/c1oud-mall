@@ -108,4 +108,19 @@ public class Refund extends BaseEntity {
         return new Refund(payment.paymentId(), payment.userId(),
                 reason, breakdown, items);
     }
+
+    public void markDbCommitted() {
+        this.status = RefundStatus.DB_COMMITTED;
+        this.dbCommittedAt = LocalDateTime.now();
+    }
+
+    public void markPgCancelled(String pgCancelTxId) {
+        this.status = RefundStatus.PG_CANCELLED;
+        this.pgCancelledAt = LocalDateTime.now();
+        this.pgCancelTxId = pgCancelTxId;
+    }
+
+    public void markFailed(String reason) {
+        this.status = RefundStatus.FAILED;
+    }
 }

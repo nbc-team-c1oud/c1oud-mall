@@ -12,6 +12,7 @@ public record RefundablePayment(
         boolean isCompleted,
         long totalAmount,
         long pgAmount,
-        long pointUsedAmount
+        long pointUsedAmount,
+        String portonePaymentId
 ) {
 }
