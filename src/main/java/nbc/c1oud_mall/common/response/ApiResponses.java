@@ -29,4 +29,8 @@ public final class ApiResponses {
     public static <T> ResponseEntity<ApiResponse<T>> created(T data, URI location) {
         return ResponseEntity.created(location).body(ApiResponse.success(data));
     }
+
+    public static <T> ResponseEntity<ApiResponse<T>> accepted(T data) {
+        return ResponseEntity.accepted().body(ApiResponse.success(data));
+    }
 }

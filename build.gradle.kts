@@ -45,6 +45,7 @@ dependencies {
 	runtimeOnly("com.h2database:h2")
 	runtimeOnly("com.mysql:mysql-connector-j")
 
+	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
@@ -52,6 +53,11 @@ dependencies {
 	testImplementation("com.fasterxml.jackson.core:jackson-databind")
 	testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+	// JWT
+	implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
 }
 
 sourceSets {
