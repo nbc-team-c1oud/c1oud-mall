@@ -77,4 +77,7 @@ public class User extends BaseEntity {
 		this.pointBalance += amount;
 	}
 
+	public void promoteToAdmin() {
+		this.role = UserRole.ADMIN;
+	}
 }
