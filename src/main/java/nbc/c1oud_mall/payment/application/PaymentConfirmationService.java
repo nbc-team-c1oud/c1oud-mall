@@ -8,7 +8,6 @@ import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.cart.application.CartService;
-import nbc.c1oud_mall.point.domain.PointPolicy;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
 import nbc.c1oud_mall.order.application.OrderService;
 import nbc.c1oud_mall.point.application.PointService;
@@ -29,7 +28,6 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
     private final OrderService orderService;
     private final PointService pointService;
     private final CartService cartService;
-    private final PointPolicy pointPolicy;
 
     @Override
     public PaymentConfirmationResult confirm(PaymentConfirmationCommand command) {
@@ -58,7 +56,7 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
             throw ex;
         }
 
-        long pointEarnedAmount = pointPolicy.calculateEarnedAmount(
+        long pointEarnedAmount = pointService.calculateEarnedAmount(
                 payment.getBreakdown().getTotalAmount());
         payment.markCompleted(info.pgTxId(), pointEarnedAmount, LocalDateTime.now());
 

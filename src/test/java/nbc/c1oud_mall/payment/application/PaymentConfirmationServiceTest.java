@@ -8,7 +8,6 @@ import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentStatus;
 import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand;
 import nbc.c1oud_mall.cart.application.CartService;
-import nbc.c1oud_mall.point.domain.PointPolicy;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
@@ -53,8 +52,6 @@ class PaymentConfirmationServiceTest {
     private PointService pointService;
     @Mock
     private CartService cartService;
-    @Mock
-    private PointPolicy pointPolicy;
 
     @InjectMocks
     private PaymentConfirmationService service;
@@ -77,7 +74,7 @@ class PaymentConfirmationServiceTest {
         Payment payment = pendingPayment(9_000L, 1_000L);
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(9_000L));
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
-        when(pointPolicy.calculateEarnedAmount(10_000L)).thenReturn(100L);
+        when(pointService.calculateEarnedAmount(10_000L)).thenReturn(100L);
 
         PaymentConfirmationResult result =
                 service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
@@ -204,7 +201,7 @@ class PaymentConfirmationServiceTest {
         Payment payment = pendingPayment(10_000L, 0L);
         when(portOnePaymentQueryPort.query(PORTONE_ID)).thenReturn(paidInfo(10_000L));
         when(paymentRepository.findByPortonePaymentId(PORTONE_ID)).thenReturn(Optional.of(payment));
-        when(pointPolicy.calculateEarnedAmount(10_000L)).thenReturn(100L);
+        when(pointService.calculateEarnedAmount(10_000L)).thenReturn(100L);
 
         service.confirm(new PaymentConfirmationCommand(PORTONE_ID, USER_ID, ORDER_ID));
 

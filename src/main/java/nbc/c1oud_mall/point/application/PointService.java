@@ -11,6 +11,7 @@ import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.point.application.dto.PointHistoryResponse;
 import nbc.c1oud_mall.point.application.dto.PointReconciliationResponse;
 import nbc.c1oud_mall.point.domain.PointHistory;
+import nbc.c1oud_mall.point.domain.PointPolicy;
 import nbc.c1oud_mall.point.domain.PointTransactionType;
 import nbc.c1oud_mall.point.infrastructure.PointJpaRepository;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,15 @@ public class PointService {
     private final PointJpaRepository pointJpaRepository;
     private final UserRepository userRepository;
     private final EntityManager entityManager;
+    private final PointPolicy pointPolicy;
+
+    /**
+     * 결제 totalAmount 기준 적립 포인트 산정 — PointPolicy 정책 위임.
+     * 호출자(PaymentConfirmationService 등)는 정책 세부를 모르게 한다.
+     */
+    public long calculateEarnedAmount(long totalAmount) {
+        return pointPolicy.calculateEarnedAmount(totalAmount);
+    }
 
     public List<PointHistoryResponse> getPointHistories(Long userId) {
         return pointJpaRepository.findByUserIdOrderByCreatedAtDesc(userId)

@@ -11,6 +11,7 @@ import nbc.c1oud_mall.order.domain.Order;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.domain.PaymentStatus;
 import nbc.c1oud_mall.point.domain.PointHistory;
+import nbc.c1oud_mall.point.domain.PointPolicy;
 import nbc.c1oud_mall.point.domain.PointTransactionType;
 import nbc.c1oud_mall.point.infrastructure.PointJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +51,8 @@ class PointServiceTest {
     private UserRepository userRepository;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private PointPolicy pointPolicy;
 
     @InjectMocks
     private PointService pointService;
@@ -70,6 +73,30 @@ class PointServiceTest {
                 PaymentStatus.PENDING, null, null);
 
         orderRef = mock(Order.class);
+    }
+
+    @Nested
+    @DisplayName("calculateEarnedAmount")
+    class CalculateEarned {
+
+        @Test
+        @DisplayName("PointPolicy로 산정 위임 + 결과 그대로 반환")
+        void delegates_to_point_policy() {
+            given(pointPolicy.calculateEarnedAmount(10_000L)).willReturn(100L);
+
+            long result = pointService.calculateEarnedAmount(10_000L);
+
+            assertThat(result).isEqualTo(100L);
+            verify(pointPolicy).calculateEarnedAmount(10_000L);
+        }
+
+        @Test
+        @DisplayName("0원/음수 계산도 정책 결과 그대로 (PointPolicy가 0 반환하면 0)")
+        void returns_zero_when_policy_returns_zero() {
+            given(pointPolicy.calculateEarnedAmount(0L)).willReturn(0L);
+
+            assertThat(pointService.calculateEarnedAmount(0L)).isZero();
+        }
     }
 
     @Nested
