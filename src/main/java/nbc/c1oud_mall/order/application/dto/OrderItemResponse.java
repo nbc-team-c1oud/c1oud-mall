@@ -6,13 +6,16 @@ import nbc.c1oud_mall.order.domain.OrderItem;
 @Getter
 public class OrderItemResponse {
 
+    private final Long orderItemId;
+
     private final String productNameSnapshot;
 
     private final Long priceSnapshot;
 
     private final Integer quantity;
 
-    public OrderItemResponse(String productNameSnapshot, Long priceSnapshot, Integer quantity) {
+    public OrderItemResponse(Long orderItemId, String productNameSnapshot, Long priceSnapshot, Integer quantity) {
+        this.orderItemId = orderItemId;
         this.productNameSnapshot = productNameSnapshot;
         this.priceSnapshot = priceSnapshot;
         this.quantity = quantity;
@@ -20,6 +23,7 @@ public class OrderItemResponse {
 
     public static OrderItemResponse from(OrderItem orderItem) {
         return new OrderItemResponse(
+                orderItem.getId(),
                 orderItem.getProductNameSnapshot(),
                 orderItem.getPriceSnapshot(),
                 orderItem.getQuantity()
