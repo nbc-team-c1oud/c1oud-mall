@@ -1,4 +1,4 @@
-package nbc.c1oud_mall.common.config;
+package nbc.c1oud_mall.point.domain;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
