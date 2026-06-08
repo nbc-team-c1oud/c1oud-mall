@@ -39,8 +39,8 @@ public enum ErrorCode {
     INVALID_ORDER_STATUS("OD002", "유효하지 않은 주문 상태 변경입니다.", HttpStatus.BAD_REQUEST),
 
     // ─── 포인트 ───
-    POINT_AMOUNT_INVALID("PT001", "주문을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
-    POINT_INSUFFICIENT("PT002", "주문을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    POINT_AMOUNT_INVALID("PT001", "포인트 금액이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+    POINT_INSUFFICIENT("PT002", "포인트 잔액이 부족합니다.", HttpStatus.BAD_REQUEST),
 
     // ─── 결제 ───
     PAYMENT_AMOUNT_MISMATCH("PM001", "결제 금액이 일치하지 않습니다.", HttpStatus.BAD_REQUEST),

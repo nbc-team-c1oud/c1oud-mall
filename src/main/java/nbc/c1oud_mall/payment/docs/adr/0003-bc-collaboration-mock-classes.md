@@ -67,6 +67,20 @@ Story 2-2 결제 확정 서비스(`PaymentConfirmationService`)는 단일 트랜
 - 운영 프로파일 부팅 시 `Mock*Service` 빈이 존재하면 **부팅 실패** 시키는 `@Profile` 또는 헬스체크 도입 권장 (별도 작업)
 - 또는 통합 테스트에서 운영 프로파일 + mock 잔존 시 명시적 fail 어서션
 
+## 실구현 도입 진행 이력
+
+### 1차 — `MockOrderService → OrderService` (2026-06-04, commit `16fd3f3`)
+주문 BC `OrderService.completeOrder/cancelOrder` 실 구현 도입에 따라 `MockOrderService.java` 삭제 + 결제 확정·보상 흐름의 import·필드 교체.
+
+### 2차 — `MockPointService → PointService`, `MockCartService → CartService` (2026-06-05)
+- 포인트 BC `PointService.deductPoints(userId, amount, payment)` / `accruePoints(userId, amount, payment)` 실 구현 도입 (PointHistory INSERT + User 비관적 락)
+- 장바구니 BC `CartService.clearCart(userId)` 실 구현 사용 (`MockCartService.clearByUserId`와 1:1 매핑)
+- `MockPointService.java`, `MockCartService.java` 삭제
+- `PaymentConfirmationService` 의존성 swap + 단위 테스트 갱신
+
+### 3차 (남은 작업) — `MockInventoryService → InventoryService`
+재고 BC 실 구현 도입 시점에 동일 패턴 적용 예정. 현재 `MockInventoryService.confirmByOrderId/restoreByOrderId`만 잔존.
+
 ## References
 
 - workflows/product.md — [Story 2-2] 결제 확정 도메인 서비스

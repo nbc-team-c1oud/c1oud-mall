@@ -7,11 +7,11 @@ import nbc.c1oud_mall.payment.application.dto.PaymentConfirmationResult;
 import nbc.c1oud_mall.payment.application.dto.PortOnePaymentInfo;
 import nbc.c1oud_mall.payment.application.dto.command.PaymentConfirmationCommand;
 import nbc.c1oud_mall.payment.domain.Payment;
+import nbc.c1oud_mall.cart.application.CartService;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
 import nbc.c1oud_mall.order.application.OrderService;
-import nbc.c1oud_mall.payment.infrastructure.mock.MockCartService;
 import nbc.c1oud_mall.payment.infrastructure.mock.MockInventoryService;
-import nbc.c1oud_mall.payment.infrastructure.mock.MockPointService;
+import nbc.c1oud_mall.point.application.PointService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,8 +27,8 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
     private final PaymentCompensationService paymentCompensationService;
     private final WebhookEventRegistrar webhookEventRegistrar;
     private final OrderService orderService;
-    private final MockPointService mockPointService;
-    private final MockCartService mockCartService;
+    private final PointService pointService;
+    private final CartService cartService;
     private final MockInventoryService mockInventoryService;
 
     @Override
@@ -63,13 +63,13 @@ public class PaymentConfirmationService implements PaymentConfirmationUseCase, P
 
         orderService.completeOrder(payment.getOrderId());
         if (payment.getBreakdown().getPointUsedAmount() > 0L) {
-            mockPointService.deductPoints(payment.getUserId(),
-                    payment.getBreakdown().getPointUsedAmount());
+            pointService.deductPoints(payment.getUserId(),
+                    payment.getBreakdown().getPointUsedAmount(), payment);
         }
         if (pointEarnedAmount > 0L) {
-            mockPointService.accruePoints(payment.getUserId(), pointEarnedAmount);
+            pointService.accruePoints(payment.getUserId(), pointEarnedAmount, payment);
         }
-        mockCartService.clearByUserId(payment.getUserId());
+        cartService.clearCart(payment.getUserId());
         mockInventoryService.confirmByOrderId(payment.getOrderId());
 
         return PaymentConfirmationResult.confirmed(payment);
