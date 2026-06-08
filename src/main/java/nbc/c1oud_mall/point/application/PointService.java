@@ -9,6 +9,7 @@ import nbc.c1oud_mall.common.exception.ErrorCode;
 import nbc.c1oud_mall.order.domain.Order;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.point.application.dto.PointHistoryResponse;
+import nbc.c1oud_mall.point.application.dto.PointReconciliationResponse;
 import nbc.c1oud_mall.point.domain.PointHistory;
 import nbc.c1oud_mall.point.domain.PointTransactionType;
 import nbc.c1oud_mall.point.infrastructure.PointJpaRepository;
@@ -91,4 +92,25 @@ public class PointService {
                 .description("환불에 따른 포인트 사용 취소")
                 .build());
     }
+
+    @Transactional(readOnly = true)
+    public long calculateBalanceFromHistory(Long userId) {
+        List<PointHistory> histories = pointJpaRepository.findByUserId(userId);
+
+        return histories.stream()
+                .mapToLong(this::calculateSignedAmount)
+                .sum();
+    }
+
+    private long calculateSignedAmount(PointHistory history) {
+        PointTransactionType type = history.getTransactionType();
+        long amount = history.getAmount();
+
+        return switch (type) {
+            case EARN, USE_CANCEL -> amount;
+            case USE, EARN_CANCEL -> -amount;
+        };
+    }
+
+
 }

@@ -9,4 +9,6 @@ public interface PointJpaRepository extends JpaRepository<PointHistory, Long> {
 
     List<PointHistory> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    List<PointHistory> findByUserId(Long userId);
+
 }
