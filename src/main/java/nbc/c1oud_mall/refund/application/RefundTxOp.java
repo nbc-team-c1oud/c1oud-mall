@@ -8,6 +8,7 @@ import nbc.c1oud_mall.order.domain.OrderItem;
 import nbc.c1oud_mall.order.infrastructure.OrderJpaRepository;
 import nbc.c1oud_mall.payment.domain.Payment;
 import nbc.c1oud_mall.payment.infrastructure.PaymentJpaRepository;
+import nbc.c1oud_mall.point.application.PointService;
 import nbc.c1oud_mall.product.application.ProductService;
 import nbc.c1oud_mall.refund.application.dto.command.RefundCommand;
 import nbc.c1oud_mall.refund.application.dto.command.RefundItemCommand;
@@ -34,11 +35,12 @@ public class RefundTxOp {
     private final PaymentJpaRepository paymentJpaRepository;
     private final OrderJpaRepository orderJpaRepository;
     private final ProductService productService;
-    private final PointRestorePort pointRestorePort;
+    private final PointService pointService;
 
     /**
-     * 비관적 락 획득 → 잔여 수량 재검증 → Refund 저장(DB_COMMITTED) → 재고/포인트 복구.
+     * 비관적 락 획득 → 잔여 수량 재검증 → Refund 저장(DB_COMMITTED) → 포인트/재고 복구.
      * 단일 @Transactional로 묶어 중간 실패 시 전체 롤백.
+     * 락 순서(consistency.md §5): Payment → Point → Inventory.
      * 재고 복구는 ProductService.restoreStockWithLock per item (productId 정렬로 데드락 방지).
      */
     @Transactional
@@ -87,19 +89,19 @@ public class RefundTxOp {
         refund.markDbCommitted();
         refundJpaRepository.save(refund);
 
-        // 5. 재고 복구 (productId 정렬 → 비관락 단위 호출, 데드락 방지)
+        // 5. 포인트 복구 (사용분 환원 — consistency.md §5: Inventory보다 먼저)
+        if (breakdown.getPointRefundAmount() > 0) {
+            pointService.restorePoints(command.userId(),
+                    breakdown.getPointRefundAmount(), payment);
+        }
+
+        // 6. 재고 복구 (productId 정렬 → 비관락 단위 호출, 데드락 방지)
         lockedRequests.stream()
                 .sorted(Comparator.comparingLong(
                         req -> itemMap.get(req.orderItemId()).getProductId()))
                 .forEach(req -> productService.restoreStockWithLock(
                         itemMap.get(req.orderItemId()).getProductId(),
                         req.quantity()));
-
-        // 6. 포인트 복구 (포인트 결제 사용분이 있을 때만)
-        if (breakdown.getPointRefundAmount() > 0) {
-            pointRestorePort.restore(command.userId(),
-                    breakdown.getPointRefundAmount(), payment.getId());
-        }
 
         return refund;
     }
