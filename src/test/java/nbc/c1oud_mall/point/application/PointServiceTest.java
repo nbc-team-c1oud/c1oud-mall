@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -263,6 +264,55 @@ class PointServiceTest {
             pointService.restorePoints(USER_ID, 1_000L, payment);
 
             verify(userRepository).findByIdForUpdate(eq(USER_ID));
+        }
+    }
+
+    @Nested
+    @DisplayName("calculateBalanceFromHistory")
+    class CalculateBalanceFromHistory {
+
+        @Test
+        @DisplayName("PointHistory 타입별 부호를 반영해 원장 기준 잔액을 계산한다")
+        void calculateBalanceFromHistory_success() {
+            // given
+            PointHistory earn = mock(PointHistory.class);
+            given(earn.getTransactionType()).willReturn(PointTransactionType.EARN);
+            given(earn.getAmount()).willReturn(5_000L);
+
+            PointHistory use = mock(PointHistory.class);
+            given(use.getTransactionType()).willReturn(PointTransactionType.USE);
+            given(use.getAmount()).willReturn(1_000L);
+
+            PointHistory useCancel = mock(PointHistory.class);
+            given(useCancel.getTransactionType()).willReturn(PointTransactionType.USE_CANCEL);
+            given(useCancel.getAmount()).willReturn(500L);
+
+            PointHistory earnCancel = mock(PointHistory.class);
+            given(earnCancel.getTransactionType()).willReturn(PointTransactionType.EARN_CANCEL);
+            given(earnCancel.getAmount()).willReturn(200L);
+
+            given(pointJpaRepository.findByUserId(USER_ID))
+                    .willReturn(List.of(earn, use, useCancel, earnCancel));
+
+            // when
+            long calculatedBalance = pointService.calculateBalanceFromHistory(USER_ID);
+
+            // then
+            assertThat(calculatedBalance).isEqualTo(4_300L);
+        }
+
+        @Test
+        @DisplayName("PointHistory가 없으면 원장 기준 잔액은 0이다")
+        void calculateBalanceFromHistory_emptyHistories_returnZero() {
+            // given
+            given(pointJpaRepository.findByUserId(USER_ID))
+                    .willReturn(List.of());
+
+            // when
+            long calculatedBalance = pointService.calculateBalanceFromHistory(USER_ID);
+
+            // then
+            assertThat(calculatedBalance).isEqualTo(0L);
         }
     }
 }
