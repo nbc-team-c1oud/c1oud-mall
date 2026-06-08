@@ -1,25 +1,25 @@
-## ─── DataSource (MySQL) ───
-#spring:
-#  datasource:
-#    url: ${DB_URL}
-#    driver-class-name: com.mysql.cj.jdbc.Driver
-#    username: ${DB_USERNAME}
-#    password: ${DB_PASSWORD}
-#
-#  # ─── JPA ───
-#  jpa:
-#    hibernate:
-#      ddl-auto: validate
-#    show-sql: false
-#    properties:
-#      hibernate:
-#        format_sql: false
-#        dialect: org.hibernate.dialect.MySQLDialect
+# ─── DataSource (MySQL) ───
+spring:
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
-  # ─── H2 Console (prod 비활성) ───
-#  h2:
-#    console:
-#      enabled: false
+  # ─── JPA ───
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQLDialect
+
+ #  ─── H2 Console (prod 비활성) ───
+  h2:
+    console:
+      enabled: false
 
 # ─── Logging ───
 logging:
