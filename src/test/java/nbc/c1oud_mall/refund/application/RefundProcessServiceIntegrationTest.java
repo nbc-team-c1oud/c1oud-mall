@@ -68,6 +68,8 @@ class RefundProcessServiceIntegrationTest {
     private Long savedOrderId;
     private Long savedOrderItemId;
     private Long savedPaymentId;
+    private Long savedProductId;
+    private Integer initialStockQuantity;
     private String portonePaymentId;
 
     @BeforeEach
@@ -91,14 +93,16 @@ class RefundProcessServiceIntegrationTest {
                 new User("refund-test@test.com", "pw", "환불테스터", "010-0000-1111"));
         savedUserId = user.getId();
 
+        initialStockQuantity = 10;
         Product product = productJpaRepository.saveAndFlush(Product.builder()
                 .name("테스트상품")
                 .price(5_000L)
-                .stockQuantity(10)
+                .stockQuantity(initialStockQuantity)
                 .category("ELECTRONICS")
                 .status(ProductStatus.SALE)
                 .description("통합테스트용")
                 .build());
+        savedProductId = product.getId();
 
         OrderItem item = new OrderItem(product, "테스트상품", 5_000L, qty);
         Order order = Order.builder()
@@ -138,6 +142,10 @@ class RefundProcessServiceIntegrationTest {
 
         verify(portOnePaymentCancelPort).cancel(
                 portonePaymentId, 10_000L, "단순 변심", "refund-" + result.refundId());
+
+        // 재고 복구 검증: stockQuantity가 환불수량(2)만큼 증가
+        Product productAfter = productJpaRepository.findById(savedProductId).orElseThrow();
+        assertThat(productAfter.getStockQuantity()).isEqualTo(initialStockQuantity + 2);
     }
 
     @Test
@@ -173,6 +181,10 @@ class RefundProcessServiceIntegrationTest {
 
         assertThat(refundJpaRepository.count()).isZero();
         verify(portOnePaymentCancelPort, Mockito.never()).cancel(any(), any(), any(), any());
+
+        // 롤백 검증: stockQuantity가 원상 복구(재고 증가 → 롤백으로 원본)
+        Product productAfter = productJpaRepository.findById(savedProductId).orElseThrow();
+        assertThat(productAfter.getStockQuantity()).isEqualTo(initialStockQuantity);
     }
 
     @Test
