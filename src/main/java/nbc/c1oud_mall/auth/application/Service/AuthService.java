@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import nbc.c1oud_mall.auth.domain.UserRole;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.auth.infrastructure.UserRepository;
 import nbc.c1oud_mall.auth.presentation.dto.LoginRequest;
@@ -41,7 +42,8 @@ public class AuthService {
 			request.getEmail(),
 			encodedPassword,
 			request.getName(),
-			request.getPhoneNumber()
+			request.getPhoneNumber(),
+			UserRole.USER
 		);
 		userRepository.save(user);
 	}
