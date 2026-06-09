@@ -38,3 +38,6 @@ out/
 .claude
 workflows
 .env
+
+!.github/workflows/
+!.github/workflows/*
