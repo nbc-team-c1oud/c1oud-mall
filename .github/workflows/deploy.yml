@@ -57,5 +57,9 @@ jobs:
               -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
               -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              -e SUPER_ADMIN_EMAIL=${{ secrets.SUPER_ADMIN_EMAIL }} \
+              -e SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }} \
+              -e PORTONE_API_SECRET=${{ secrets.PORTONE_API_SECRET }} \
+              -e PORTONE_WEBHOOK_SECRET=${{ secrets.PORTONE_WEBHOOK_SECRET }} \
               -e SPRING_PROFILES_ACTIVE=prod \
               ${{ secrets.DOCKERHUB_USERNAME }}/c1oud-mall:latest
