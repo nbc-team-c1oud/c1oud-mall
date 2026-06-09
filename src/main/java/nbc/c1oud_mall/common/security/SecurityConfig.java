@@ -82,7 +82,8 @@ public class SecurityConfig {
 		// allowCredentials=true 에서는 와일드카드 사용 불가 → originPatterns 사용
 		config.setAllowedOriginPatterns(List.of(
 			"http://localhost:*",
-			"http://127.0.0.1:*"
+			"http://127.0.0.1:*",
+			"https://deqgx2ewq7d9a.cloudfront.net"
 		));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
