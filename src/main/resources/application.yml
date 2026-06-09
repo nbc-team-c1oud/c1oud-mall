@@ -2,7 +2,7 @@ spring:
   application:
     name: c1oud_mall
   profiles:
-    active: dev
+    active: prod
   jpa:
     open-in-view: false
 
