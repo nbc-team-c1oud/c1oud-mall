@@ -41,7 +41,7 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/c1oud-mall:latest
-          platforms: linux/amd64  # ✨ 이 줄이 추가되어 Intel/AMD 기반 EC2에서 호환성 에러가 나지 않습니다!
+          platforms: linux/amd64 # 플랫폼 강제 지정
 
       # 6. EC2에 SSH 접속해서 배포
       - name: Deploy to EC2
