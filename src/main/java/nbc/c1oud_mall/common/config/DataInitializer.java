@@ -3,6 +3,7 @@ package nbc.c1oud_mall.common.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +12,10 @@ import nbc.c1oud_mall.auth.domain.UserRole;
 import nbc.c1oud_mall.auth.domain.entity.User;
 import nbc.c1oud_mall.auth.infrastructure.UserRepository;
 
+// prod 전용 — RDS 첫 부팅 시 초기 SUPER_ADMIN 1건 시드 (SQL 수동 삽입 대체).
+// dev/local 계정 시드는 AdminAccountInit이 담당.
 @Component
+@Profile("prod")
 @RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
 

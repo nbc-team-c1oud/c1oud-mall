@@ -6,6 +6,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import nbc.c1oud_mall.auth.application.Service.AdminService;
+import nbc.c1oud_mall.auth.application.Service.UserService;
 import nbc.c1oud_mall.auth.presentation.dto.UserResponse;
 import nbc.c1oud_mall.common.response.ApiResponse;
 import nbc.c1oud_mall.common.response.ApiResponses;
@@ -24,6 +26,14 @@ import nbc.c1oud_mall.common.response.ApiResponses;
 public class AdminController {
 
 	private final AdminService adminService;
+	private final UserService userService;
+
+	//관리자 본인 프로필 조회
+	@PreAuthorize("hasRole('ADMIN')")
+	@GetMapping("/me")
+	public ResponseEntity<ApiResponse<UserResponse>> getMe(@AuthenticationPrincipal Long userId) {
+		return ApiResponses.ok(userService.getMe(userId));
+	}
 
 	//user 권한 승격
 	@PreAuthorize("hasRole('SUPER_ADMIN')")
