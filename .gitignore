@@ -36,7 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 .claude
-workflows
 .env
 
 !.github/workflows/
