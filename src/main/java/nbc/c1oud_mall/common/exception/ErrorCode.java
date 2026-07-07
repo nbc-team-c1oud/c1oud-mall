@@ -28,6 +28,13 @@ public enum ErrorCode {
     TOKEN_EXPIRED("U006", "만료된 토큰입니다.", HttpStatus.UNAUTHORIZED),
     ALREADY_ADMIN("U007", "이미 관리자 권한을 가진 사용자입니다.", HttpStatus.CONFLICT),
 
+    // ─── 관리자 ───
+    // ADM001·ADM002는 admin 컨텍스트 전용 코드로 등록만 해두고, 실사용처는 후속 확장(전용
+    // AccessDeniedHandler, 롤 값 파라미터화) 시점에 연결한다 (product-admin-backoffice.md 참고).
+    ADMIN_ACCESS_DENIED("ADM001", "관리자 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    INVALID_ROLE("ADM002", "유효하지 않은 역할 값입니다.", HttpStatus.BAD_REQUEST),
+    ADMIN_TARGET_USER_NOT_FOUND("ADM003", "롤 변경 대상 사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+
     // ─── 장바구니 ───
     CART_ITEM_NOT_FOUND("CRT001", "장바구니 상품을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     CART_ACCESS_DENIED("CRT002", "해당 장바구니에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),

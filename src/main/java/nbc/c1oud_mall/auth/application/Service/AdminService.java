@@ -26,7 +26,7 @@ public class AdminService {
 	@Transactional
 	public void promoteToAdmin(Long userId) {
 		User user = userRepository.findById(userId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+			.orElseThrow(() -> new BusinessException(ErrorCode.ADMIN_TARGET_USER_NOT_FOUND));
 
 		if (user.getRole() == UserRole.ADMIN || user.getRole() == UserRole.SUPER_ADMIN) {
 			throw new BusinessException(ErrorCode.ALREADY_ADMIN);
